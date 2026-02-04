@@ -9,14 +9,20 @@ The goal is to have a realistic but simple application that is easy to extend ea
 ## Tech-stack
 
 > [!NOTE]
-> Write a short description of your tech-stack here in terms of programming language(s) and database engine(s).
+> - **Backend:** C# / .NET (ASP.NET Core Web API)
+- **Database:** MySQL (relational database)
+- **ORM/Data access:** Entity Framework Core (migrations)
+- **DevOps/Runtime:** Docker + Docker Compose
+- **CI/CD:** GitHub Actions (build, test, analysis, deploy)
 
 [...]
 
 ## Architecture
 
 > [!NOTE]
-> Write a short explanation of your planned architecture here.
+> - **API layer:** Controllers + DTOs (HTTP endpoints only)
+- **Application layer:** Services containing business logic (Products, Cart, Orders, Users)
+- **Infrastructure layer:** MySQL + EF Core repositories and migrations
 
 [...]
 
