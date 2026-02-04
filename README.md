@@ -59,7 +59,7 @@ The goal is to have a realistic but simple application that is easy to extend ea
 ### Week 10
 **Feature 1:** Add `User` model + `POST /api/auth/register`
 
-**Feature 2:** Add `POST /api/auth/login
+**Feature 2:** Add `POST /api/auth/login`
 
 ### Week 11
 **Feature 1:** Add `CartItem` model + `POST /api/cart/items` (add item to cart)
