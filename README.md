@@ -54,7 +54,7 @@ The goal is to have a realistic but simple application that is easy to extend ea
 ### Week 9
 **Feature 1:** Add `DELETE /api/products/{id}` (delete a product)  
 
-**Feature 2:** Add product search: `GET /api/products?search=...
+**Feature 2:** Add product search: `GET /api/products?search=...`
 
 ### Week 10
 **Feature 1:** Add `User` model + `POST /api/auth/register`
