@@ -1,6 +1,6 @@
 # [...]
 
-> [!SimpleShop]
+> [!NOTE]
 > SimpleShop is a small e-commerce backend where users can browse products, add items to a cart, and place orders.  
 The goal is to have a realistic but simple application that is easy to extend each week while we add DevOps-related non-functional requirements
 
