@@ -10,17 +10,18 @@ The goal is to have a realistic but simple application that is easy to extend ea
 
 > [!NOTE]
 > 
-
-[- **Backend:** C# / .NET (ASP.NET Core Web API)
+- **Backend:** C# / .NET (ASP.NET Core Web API)
 - **Database:** MySQL (relational database)
 - **ORM/Data access:** Entity Framework Core (migrations)
 - **DevOps/Runtime:** Docker + Docker Compose
-- **CI/CD:** GitHub Actions (build, test, analysis, deploy)]
+- **CI/CD:** GitHub Actions (build, test, analysis, deploy)
+[...]
 
 ## Architecture
 
 > [!NOTE]
-> - **API layer:** Controllers + DTOs (HTTP endpoints only)
+>
+- **API layer:** Controllers + DTOs (HTTP endpoints only)
 - **Application layer:** Services containing business logic (Products, Cart, Orders, Users)
 - **Infrastructure layer:** MySQL + EF Core repositories and migrations
 
