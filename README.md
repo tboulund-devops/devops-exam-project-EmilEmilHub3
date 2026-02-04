@@ -1,4 +1,4 @@
-# [...]
+# [SimpleShop]
 
 > [!NOTE]
 > SimpleShop is a small e-commerce backend where users can browse products, add items to a cart, and place orders.  
