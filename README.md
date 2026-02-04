@@ -1,7 +1,8 @@
 # [...]
 
-> [!NOTE]
-> Provide a project title in the heading above. Just below this note write a short description of the application you plan to build.
+> [!NOTE] SimpleShop
+> SimpleShop is a small e-commerce backend where users can browse products, add items to a cart, and place orders.  
+The goal is to have a realistic but simple application that is easy to extend each week while we add DevOps-related non-functional requirements
 
 [...]
 
