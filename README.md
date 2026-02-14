@@ -72,7 +72,7 @@ The goal is to have a realistic but simple application that is easy to extend ea
 **Feature 2:** Add Remove item from cart: `DELETE /api/cart/items/{id}`
 
 ### Week 13
-**Feature 1:** Add Create order from cart: `POST /api/orders`
+**Feature 1:** Create Order + OrderLine records from cart items: POST /api/orders
 
 **Feature 2:** Clear cart after successful order 
 
