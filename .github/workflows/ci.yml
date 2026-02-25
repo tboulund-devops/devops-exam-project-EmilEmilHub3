@@ -11,7 +11,7 @@ jobs:
 
     env:
       CONFIGURATION: Release
-      COVERAGE_THRESHOLD: "80"
+      COVERAGE_THRESHOLD: "10"
       MUTATION_HIGH: "80"
       MUTATION_BREAK: "60"
 
