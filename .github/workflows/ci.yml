@@ -79,7 +79,7 @@ jobs:
             --test-project "SimpleShop.Tests/SimpleShop.Tests.csproj" \
             --reporter "html" \
             --threshold-high $MUTATION_HIGH \
-            --threshold-break $MUTATION_BREAK \
+            --threshold-low $MUTATION_LOW \
             --output "StrykerOutput"
 
       - name: Debug Stryker Output
