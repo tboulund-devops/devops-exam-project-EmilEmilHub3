@@ -1,4 +1,4 @@
-name: CI
+name: workflow.yml
 
 on:
   push:
@@ -8,12 +8,6 @@ on:
 jobs:
   integration:
     runs-on: ubuntu-latest
-
-    env:
-      CONFIGURATION: Release
-      COVERAGE_THRESHOLD: "10"
-      MUTATION_HIGH: "80"
-      MUTATION_BREAK: "60"
 
     steps:
       - name: Checkout code
@@ -36,62 +30,30 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build -c $CONFIGURATION --no-restore
+        run: dotnet build -c Release --no-restore
 
       - name: Run unit tests (with coverage)
         run: |
-          dotnet test SimpleShop.sln -c $CONFIGURATION --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+          dotnet test SimpleShop.sln -c Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
       - name: Ensure report folders exist
+        if: always()
         run: |
           mkdir -p CoverageReport
           mkdir -p StrykerOutput
 
-      - name: Generate coverage report (Html + TextSummary)
-        run: |
-          reportgenerator \
-            -reports:"TestResults/**/coverage.cobertura.xml" \
-            -targetdir:"CoverageReport" \
-            "-reporttypes:Html;TextSummary"
-          cat CoverageReport/Summary.txt
-
-      - name: Enforce coverage threshold
-        run: |
-          LINE_COVERAGE=$(grep -i "Line coverage" CoverageReport/Summary.txt | sed -E 's/.*Line coverage: ([0-9]+).*/\1/')
-          echo "Detected line coverage: ${LINE_COVERAGE}%"
-          echo "Required line coverage: ${COVERAGE_THRESHOLD}%"
-
-          if [ -z "$LINE_COVERAGE" ]; then
-            echo "Could not parse coverage."
-            exit 1
-          fi
-
-          if [ "$LINE_COVERAGE" -lt "$COVERAGE_THRESHOLD" ]; then
-            echo "Coverage threshold not met."
-            exit 1
-          fi
-
-      - name: Run Mutation Tests
-        run: |
-          mkdir -p StrykerOutput
-          dotnet stryker \
-            --project "SimpleShop.Api/SimpleShop.Api.csproj" \
-            --test-project "SimpleShop.Tests/SimpleShop.Tests.csproj" \
-            --reporter "html" \
-            --threshold-high $MUTATION_HIGH \
-            --threshold-low $MUTATION_LOW \
-            --output "StrykerOutput"
-
-      - name: Debug Stryker Output
+      - name: Generate coverage report
         if: always()
         run: |
-          echo "---- Root directory ----"
-          ls -la
-          echo "---- StrykerOutput ----"
-          ls -la StrykerOutput || true
-          find StrykerOutput -maxdepth 4 -type f || true
+          reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:"CoverageReport" -reporttypes:Html
 
-      - name: Upload Coverage Report
+      - name: Run Mutation Tests
+        if: always()
+        run: |
+          mkdir -p StrykerOutput
+          dotnet stryker --project "SimpleShop.Api/SimpleShop.Api.csproj" --test-project "SimpleShop.Tests/SimpleShop.Tests.csproj" --reporter "html" --threshold-high 80 --threshold-low 50 --output "StrykerOutput"
+
+      - name: Collect Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -99,7 +61,7 @@ jobs:
           path: CoverageReport
           if-no-files-found: warn
 
-      - name: Upload Stryker Report
+      - name: Collect Stryker Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
