@@ -1,0 +1,74 @@
+name: workflow.yml
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install required tools
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          dotnet tool install --global dotnet-stryker
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Run unit tests (with coverage)
+        continue-on-error: true
+        run: |
+          dotnet test \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: Ensure report folders exist
+        if: always()
+        run: |
+          mkdir -p CoverageReport
+          mkdir -p StrykerOutput
+
+      - name: Generate coverage report
+        if: always()
+        run: |
+          reportgenerator \
+            -reports:"TestResults/**/coverage.cobertura.xml" \
+            -targetdir:"CoverageReport" \
+            -reporttypes:Html
+
+      - name: Run Mutation Tests
+        continue-on-error: true
+        run: |
+          dotnet stryker \
+            --project "Calculator/Calculator.csproj" \
+            --test-project "Tests/Tests.csproj" \
+            --reporter "html" \
+            --threshold-high 80 \
+            --output "StrykerOutput" || true
+
+      - name: Collect Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: CoverageReport
+          if-no-files-found: warn
+
+      - name: Collect Stryker Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stryker-report
+          path: StrykerOutput
+          if-no-files-found: warn
