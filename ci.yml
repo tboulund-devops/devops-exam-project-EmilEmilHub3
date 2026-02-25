@@ -1,0 +1,107 @@
+name: ci.yml
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+
+    env:
+      CONFIGURATION: Release
+      COVERAGE_THRESHOLD: "80"    
+      MUTATION_BREAK: "60"      
+      MUTATION_HIGH: "80"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install required tools
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          dotnet tool install --global dotnet-stryker
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c $CONFIGURATION --no-restore
+
+      - name: Run unit tests (with coverage)
+        run: |
+          dotnet test SimpleShop.sln -c $CONFIGURATION --no-build \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: Ensure report folders exist
+        if: always()
+        run: |
+          mkdir -p CoverageReport
+          mkdir -p StrykerOutput
+
+      - name: Generate coverage report (Html + TextSummary)
+        if: always()
+        run: |
+          reportgenerator \
+            -reports:"TestResults/**/coverage.cobertura.xml" \
+            -targetdir:"CoverageReport" \
+            -reporttypes:Html;TextSummary
+          cat CoverageReport/Summary.txt
+
+      - name: Enforce coverage threshold
+        run: |
+          if [ ! -f "CoverageReport/Summary.txt" ]; then
+            echo "Coverage summary not found."
+            exit 1
+          fi
+
+          LINE_COVERAGE=$(grep -i "Line coverage" CoverageReport/Summary.txt | head -n 1 | sed -E 's/.*Line coverage: ([0-9]+).*/\1/')
+          echo "Detected line coverage: ${LINE_COVERAGE}%"
+          echo "Required line coverage: ${COVERAGE_THRESHOLD}%"
+
+          if [ -z "$LINE_COVERAGE" ]; then
+            echo "Could not parse line coverage."
+            exit 1
+          fi
+
+          if [ "$LINE_COVERAGE" -lt "$COVERAGE_THRESHOLD" ]; then
+            echo "Coverage threshold not met."
+            exit 1
+          fi
+
+      - name: Run Mutation Tests
+        run: |
+          dotnet stryker \
+            --project "SimpleShop.Api/SimpleShop.Api.csproj" \
+            --test-project "SimpleShop.Tests/SimpleShop.Tests.csproj" \
+            --reporter "html" \
+            --threshold-high $MUTATION_HIGH \
+            --threshold-break $MUTATION_BREAK \
+            --output "StrykerOutput"
+
+      - name: Collect Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: CoverageReport
+          if-no-files-found: warn
+
+      - name: Collect Stryker Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stryker-report
+          path: StrykerOutput
+          if-no-files-found: warn
