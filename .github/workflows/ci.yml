@@ -1,4 +1,4 @@
-name: ci.yml
+name: ci
 
 on:
   push:
@@ -36,15 +36,14 @@ jobs:
       - name: Build
         run: dotnet build -c $CONFIGURATION --no-restore
 
-      # --- TEST + COVERAGE (always attempt, even if failing) ---
+      # --- TEST + COVERAGE (always attempt) ---
       - name: Run unit tests (with coverage)
-        id: tests
         continue-on-error: true
         run: |
           dotnet test SimpleShop.sln -c $CONFIGURATION --no-build \
             --collect:"XPlat Code Coverage" \
             --results-directory ./TestResults \
-            /p:ExcludeByFile="**/Migrations/*;**/Program.cs;**/*DbContext*.cs"
+            --settings coverlet.runsettings
 
       - name: Ensure report folders exist
         if: always()
@@ -70,15 +69,19 @@ jobs:
       # --- MUTATION (always attempt) ---
       - name: Run Mutation Tests (Stryker)
         if: always()
-        id: stryker
         continue-on-error: true
         run: |
-          dotnet stryker --output "StrykerOutput" || true
+          dotnet stryker --config-file stryker-config.json || true
+
+          # Stryker output ligger typisk i StrykerOutput automatisk.
+          # Hvis din version skriver et andet sted, så kan du se det i logs og justere upload-path.
 
       - name: Debug Stryker output
         if: always()
         run: |
-          echo "---- StrykerOutput files ----"
+          echo "---- Root ----"
+          ls -la
+          echo "---- StrykerOutput ----"
           find StrykerOutput -maxdepth 6 -type f || true
 
       # --- UPLOAD REPORTS (always) ---
@@ -121,7 +124,7 @@ jobs:
             FAIL=1
           fi
 
-          # Stryker gate: require that a report exists
+          # Stryker gate: kræv at der er output
           if [ ! -d "StrykerOutput" ] || [ -z "$(find StrykerOutput -type f 2>/dev/null)" ]; then
             echo "No Stryker output produced -> FAIL"
             FAIL=1
