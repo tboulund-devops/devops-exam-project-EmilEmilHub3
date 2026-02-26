@@ -43,7 +43,7 @@ jobs:
           dotnet test SimpleShop.sln -c $CONFIGURATION --no-build \
             --collect:"XPlat Code Coverage" \
             --results-directory ./TestResults \
-            --settings coverlet.runsettings
+            --settings ./coverlet.runsettings
 
       - name: Ensure report folders exist
         if: always()
@@ -58,7 +58,8 @@ jobs:
           reportgenerator \
             -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"CoverageReport" \
-            -reporttypes:"Html;TextSummary" || true
+            -reporttypes:"Html;TextSummary" \
+            -filefilters:"-**/Migrations/**;-**/Program.cs;-**/*DbContext*.cs" || true
 
           if [ -f "CoverageReport/Summary.txt" ]; then
             cat CoverageReport/Summary.txt
@@ -72,9 +73,6 @@ jobs:
         continue-on-error: true
         run: |
           dotnet stryker --config-file stryker-config.json || true
-
-          # Stryker output ligger typisk i StrykerOutput automatisk.
-          # Hvis din version skriver et andet sted, så kan du se det i logs og justere upload-path.
 
       - name: Debug Stryker output
         if: always()
