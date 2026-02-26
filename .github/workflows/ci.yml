@@ -45,13 +45,13 @@ jobs:
             --results-directory ./TestResults \
             --settings ./coverlet.runsettings
 
-      - name: Ensure report folders exist
+      - name: Prepare report folders
         if: always()
         run: |
           mkdir -p CoverageReport
           mkdir -p StrykerOutput
 
-      - name: Generate coverage report (Html + TextSummary)
+      - name: Generate coverage report
         if: always()
         continue-on-error: true
         run: |
@@ -74,6 +74,7 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
+          mkdir -p StrykerOutput
           dotnet stryker \
             --config-file stryker-config.json \
             --output StrykerOutput \
@@ -88,7 +89,7 @@ jobs:
           ls -la StrykerOutput || true
 
       # ---------------- UPLOAD REPORTS ----------------
-      - name: Collect Coverage Report
+      - name: Upload Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -96,7 +97,7 @@ jobs:
           path: CoverageReport
           if-no-files-found: warn
 
-      - name: Collect Stryker Report
+      - name: Upload Stryker Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -105,7 +106,7 @@ jobs:
           if-no-files-found: warn
 
       # ---------------- QUALITY GATE ----------------
-      - name: Enforce thresholds (fail job at end)
+      - name: Enforce thresholds
         if: always()
         run: |
           FAIL=0
@@ -124,7 +125,7 @@ jobs:
             FAIL=1
           fi
 
-          # STRYKER CHECK (kun hvis folder findes)
+          # STRYKER CHECK
           if [ -d "StrykerOutput" ] && [ "$(ls -A StrykerOutput)" ]; then
             echo "Stryker output exists"
           else
