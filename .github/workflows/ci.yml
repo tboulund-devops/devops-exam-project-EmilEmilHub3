@@ -36,8 +36,9 @@ jobs:
       - name: Build
         run: dotnet build -c $CONFIGURATION --no-restore
 
-      # ---------------- TEST + COVERAGE (always produce report) ----------------
+      # ---------------- TEST + COVERAGE (always attempt) ----------------
       - name: Run unit tests (with coverage)
+        id: tests
         continue-on-error: true
         run: |
           dotnet test SimpleShop.sln -c $CONFIGURATION --no-build \
@@ -58,7 +59,8 @@ jobs:
           reportgenerator \
             -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"CoverageReport" \
-            -reporttypes:"Html;TextSummary" || true
+            -reporttypes:"Html;TextSummary" \
+            -filefilters:"-**/Migrations/**;-**/Program.cs;-**/*DbContext*.cs" || true
 
           echo "=========== COVERAGE SUMMARY ==========="
           if [ -f "CoverageReport/Summary.txt" ]; then
@@ -68,7 +70,7 @@ jobs:
           fi
           echo "========================================"
 
-      # ---------------- STRYKER (always attempt + always upload report if it exists) ----------------
+      # ---------------- STRYKER (always attempt) ----------------
       - name: Run Mutation Tests (Stryker)
         if: always()
         continue-on-error: true
@@ -77,11 +79,19 @@ jobs:
           dotnet stryker --config-file stryker-config.json
           echo "STRYKER_EXIT_CODE=$?" >> $GITHUB_ENV
 
-      - name: Debug Stryker output
+          # Ensure something ends up in StrykerOutput root (so upload always finds files)
+          REPORT=$(find StrykerOutput -type f -name "mutation-report.html" | head -n 1)
+          if [ -n "$REPORT" ]; then
+            cp "$REPORT" StrykerOutput/mutation-report.html
+          fi
+
+      - name: Debug outputs
         if: always()
         run: |
           echo "---- Root ----"
           ls -la
+          echo "---- CoverageReport ----"
+          find CoverageReport -maxdepth 3 -type f || true
           echo "---- StrykerOutput ----"
           find StrykerOutput -maxdepth 8 -type f || true
 
@@ -108,12 +118,15 @@ jobs:
         run: |
           FAIL=0
 
-          # COVERAGE CHECK
+          # --- COVERAGE CHECK ---
           if [ -f "CoverageReport/Summary.txt" ]; then
-            LINE_COVERAGE=$(grep -i "Line coverage" CoverageReport/Summary.txt | head -n 1 | sed -E 's/.*Line coverage: ([0-9]+).*/\1/')
-            echo "Detected line coverage: ${LINE_COVERAGE}% (required ${COVERAGE_THRESHOLD}%)"
+            # Extract number (can be "33.5%" etc.) -> take integer part
+            LINE_COVERAGE_RAW=$(grep -i "Line coverage" CoverageReport/Summary.txt | head -n 1 | sed -E 's/.*Line coverage: *([0-9]+(\.[0-9]+)?).*/\1/')
+            LINE_COVERAGE_INT=$(echo "$LINE_COVERAGE_RAW" | awk -F. '{print $1}')
 
-            if [ -z "$LINE_COVERAGE" ] || [ "$LINE_COVERAGE" -lt "$COVERAGE_THRESHOLD" ]; then
+            echo "Detected line coverage: ${LINE_COVERAGE_RAW}% (required ${COVERAGE_THRESHOLD}%)"
+
+            if [ -z "$LINE_COVERAGE_INT" ] || [ "$LINE_COVERAGE_INT" -lt "$COVERAGE_THRESHOLD" ]; then
               echo "Coverage threshold not met -> FAIL"
               FAIL=1
             fi
@@ -122,17 +135,16 @@ jobs:
             FAIL=1
           fi
 
-          # STRYKER CHECK
-          # 1) kræv at der er output (rapport)
-          if [ ! -d "StrykerOutput" ] || [ -z "$(find StrykerOutput -type f 2>/dev/null)" ]; then
-            echo "Stryker output missing -> FAIL"
+          # --- STRYKER CHECK ---
+          echo "Stryker exit code: ${STRYKER_EXIT_CODE:-unknown}"
+          if [ "${STRYKER_EXIT_CODE:-1}" -ne 0 ]; then
+            echo "Stryker failed or thresholds not met -> FAIL"
             FAIL=1
           fi
 
-          # 2) hvis Stryker exit code ikke var 0, så fail
-          echo "Stryker exit code: ${STRYKER_EXIT_CODE:-unknown}"
-          if [ "${STRYKER_EXIT_CODE:-1}" -ne 0 ]; then
-            echo "Stryker thresholds not met or Stryker failed -> FAIL"
+          # Require that Stryker produced a report file
+          if [ ! -f "StrykerOutput/mutation-report.html" ] && [ -z "$(find StrykerOutput -type f 2>/dev/null)" ]; then
+            echo "Stryker report missing -> FAIL"
             FAIL=1
           fi
 

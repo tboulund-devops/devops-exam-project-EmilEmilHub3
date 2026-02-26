@@ -4,8 +4,11 @@
     <DataCollectors>
       <DataCollector friendlyName="XPlat Code Coverage">
         <Configuration>
-          <!-- Fjern ting der ikke giver mening at måle på (Program/Migrations/DbContext) -->
-          <ExcludeByFile>**/Migrations/**;**/Program.cs;**/*DbContext*.cs;**/*ModelSnapshot*.cs</ExcludeByFile>
+          <!-- Exclude generated/infra files from coverage -->
+          <ExcludeByFile>**/Migrations/*;**/Program.cs;**/*DbContext*.cs</ExcludeByFile>
+
+          <!-- Output format -->
+          <Format>cobertura</Format>
         </Configuration>
       </DataCollector>
     </DataCollectors>
