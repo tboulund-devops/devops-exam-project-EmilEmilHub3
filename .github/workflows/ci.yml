@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -36,18 +36,15 @@ jobs:
       - name: Build
         run: dotnet build -c $CONFIGURATION --no-restore
 
-      # ---------------- TEST + COVERAGE (always produce report) ----------------
+      # ---------------- TEST + COVERAGE ----------------
       - name: Run unit tests (with coverage)
         id: tests
         continue-on-error: true
         run: |
-          set +e
           dotnet test SimpleShop.sln -c $CONFIGURATION --no-build \
             --collect:"XPlat Code Coverage" \
             --results-directory ./TestResults \
             --settings ./coverlet.runsettings
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
-          exit 0
 
       - name: Prepare report folders
         if: always()
@@ -69,50 +66,43 @@ jobs:
           if [ -f "CoverageReport/Summary.txt" ]; then
             cat CoverageReport/Summary.txt
           else
-            echo "No Summary.txt found (tests may have failed or no cobertura file was produced)."
+            echo "No Summary.txt found (tests kan være fejlet)."
           fi
           echo "========================================"
 
-      # ---------------- STRYKER (always produce report) ----------------
+      # ---------------- STRYKER ----------------
       - name: Run Mutation Tests (Stryker)
-        id: stryker
         if: always()
         continue-on-error: true
         run: |
           set +e
-          # Lad config styre projekt/test/ignores/thresholds
           dotnet stryker --config-file stryker-config.json
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
-          exit 0
+          echo $? > StrykerOutput/stryker-exitcode.txt
 
-      - name: Locate Stryker report folder
-        id: locate_stryker
+      - name: Ensure Stryker report exists (fallback)
         if: always()
         run: |
-          set +e
-
-          # Stryker laver typisk: StrykerOutput/<timestamp>/reports/mutation-report.html
-          # Find den nyeste mappe der indeholder en rapport
-          REPORT_FILE=$(find . -type f \( -name "mutation-report.html" -o -name "mutation-report*.html" \) 2>/dev/null | sort | tail -n 1)
-
-          if [ -n "$REPORT_FILE" ]; then
-            REPORT_DIR=$(dirname "$REPORT_FILE")
-            echo "Found report file: $REPORT_FILE"
-            echo "Uploading report dir: $REPORT_DIR"
-            echo "path=$REPORT_DIR" >> $GITHUB_OUTPUT
+          # Hvis Stryker ikke producerede en html rapport, så lav en fallback fil,
+          # så artifact altid bliver uploaded og du kan se exit code + fejlårsag.
+          if find StrykerOutput -type f -name "*.html" | grep -q .; then
+            echo "Stryker HTML report found."
           else
-            echo "No mutation-report.html found. Falling back to StrykerOutput/"
-            echo "path=StrykerOutput" >> $GITHUB_OUTPUT
+            echo "No Stryker HTML report produced." > StrykerOutput/STRYKER_FAILED.txt
+            echo "Exit code (if available):" >> StrykerOutput/STRYKER_FAILED.txt
+            cat StrykerOutput/stryker-exitcode.txt 2>/dev/null >> StrykerOutput/STRYKER_FAILED.txt || true
+            echo "" >> StrykerOutput/STRYKER_FAILED.txt
+            echo "Tip: Check stryker-config.json keys (fx 'ignore-patterns' er ugyldig)." >> StrykerOutput/STRYKER_FAILED.txt
           fi
 
+      - name: Debug Stryker output
+        if: always()
+        run: |
           echo "---- Root ----"
           ls -la
           echo "---- StrykerOutput ----"
-          ls -la StrykerOutput || true
-          echo "---- Found report candidates ----"
-          find . -maxdepth 6 -type f -name "mutation-report*.html" 2>/dev/null || true
+          find StrykerOutput -maxdepth 6 -type f -print || true
 
-      # ---------------- UPLOAD REPORTS (always) ----------------
+      # ---------------- UPLOAD REPORTS ----------------
       - name: Upload Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -126,38 +116,37 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: stryker-report
-          path: ${{ steps.locate_stryker.outputs.path }}
+          path: StrykerOutput
           if-no-files-found: warn
 
-      # ---------------- QUALITY GATE (fail at the end) ----------------
+      # ---------------- QUALITY GATE (fail at end) ----------------
       - name: Enforce thresholds (fail job at end)
         if: always()
         run: |
           FAIL=0
 
-          # COVERAGE CHECK (fra Summary.txt)
+          # COVERAGE CHECK
           if [ -f "CoverageReport/Summary.txt" ]; then
             LINE_COVERAGE=$(grep -i "Line coverage" CoverageReport/Summary.txt | head -n 1 | sed -E 's/.*Line coverage: ([0-9]+).*/\1/')
             echo "Detected line coverage: ${LINE_COVERAGE}% (required ${COVERAGE_THRESHOLD}%)"
 
             if [ -z "$LINE_COVERAGE" ] || [ "$LINE_COVERAGE" -lt "$COVERAGE_THRESHOLD" ]; then
-              echo "Coverage threshold not met"
+              echo "Coverage threshold not met -> FAIL"
               FAIL=1
             fi
           else
-            echo "Coverage summary missing"
+            echo "Coverage summary missing -> FAIL"
             FAIL=1
           fi
 
-          # STRYKER CHECK
-          # (Stryker selv håndhæver thresholds via config; exit_code != 0 => fail)
-          STRYKER_EXIT="${{ steps.stryker.outputs.exit_code }}"
+          # STRYKER CHECK (thresholds håndteres af Stryker selv via config)
+          STRYKER_EXIT=1
+          if [ -f "StrykerOutput/stryker-exitcode.txt" ]; then
+            STRYKER_EXIT=$(cat StrykerOutput/stryker-exitcode.txt)
+          fi
           echo "Stryker exit code: $STRYKER_EXIT"
 
-          if [ -z "$STRYKER_EXIT" ]; then
-            echo "Stryker exit code missing -> FAIL"
-            FAIL=1
-          elif [ "$STRYKER_EXIT" -ne 0 ]; then
+          if [ "$STRYKER_EXIT" -ne 0 ]; then
             echo "Stryker thresholds not met or Stryker failed -> FAIL"
             FAIL=1
           fi

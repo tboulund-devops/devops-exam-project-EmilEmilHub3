@@ -7,10 +7,11 @@
             "high": 80,
             "low": 50
         },
-        "ignore-patterns": [
-            "**/Migrations/**",
-            "**/Program.cs",
-            "**/*DbContext*.cs"
+        "mutate": [
+            "SimpleShop.Api/**/*.cs",
+            "!SimpleShop.Api/**/Migrations/**",
+            "!SimpleShop.Api/**/Program.cs",
+            "!SimpleShop.Api/**/*DbContext*.cs"
         ]
     }
 }
