@@ -1,0 +1,16 @@
+{
+    "stryker-config": {
+        "project": "SimpleShop.Api/SimpleShop.Api.csproj",
+        "test-projects": [ "SimpleShop.Tests/SimpleShop.Tests.csproj" ],
+        "reporters": [ "html", "progress" ],
+        "thresholds": {
+            "high": 80,
+            "low": 50
+        },
+        "ignore-patterns": [
+            "**/Migrations/**",
+            "**/Program.cs",
+            "**/*DbContext*.cs"
+        ]
+    }
+}

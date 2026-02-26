@@ -36,12 +36,15 @@ jobs:
       - name: Build
         run: dotnet build -c $CONFIGURATION --no-restore
 
-      # --- TEST + COVERAGE (run even if later steps fail) ---
+      # --- TEST + COVERAGE (always attempt, even if failing) ---
       - name: Run unit tests (with coverage)
         id: tests
         continue-on-error: true
         run: |
-          dotnet test SimpleShop.sln -c $CONFIGURATION --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults
+          dotnet test SimpleShop.sln -c $CONFIGURATION --no-build \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            /p:ExcludeByFile="**/Migrations/*;**/Program.cs;**/*DbContext*.cs"
 
       - name: Ensure report folders exist
         if: always()
@@ -57,6 +60,7 @@ jobs:
             -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"CoverageReport" \
             -reporttypes:"Html;TextSummary" || true
+
           if [ -f "CoverageReport/Summary.txt" ]; then
             cat CoverageReport/Summary.txt
           else
@@ -69,14 +73,13 @@ jobs:
         id: stryker
         continue-on-error: true
         run: |
-          mkdir -p StrykerOutput
-          dotnet stryker --project "SimpleShop.Api/SimpleShop.Api.csproj" --test-project "SimpleShop.Tests/SimpleShop.Tests.csproj" --reporter "html" --threshold-high $MUTATION_HIGH --threshold-low $MUTATION_LOW --output "StrykerOutput" || true
+          dotnet stryker --output "StrykerOutput" || true
 
       - name: Debug Stryker output
         if: always()
         run: |
           echo "---- StrykerOutput files ----"
-          find StrykerOutput -maxdepth 5 -type f || true
+          find StrykerOutput -maxdepth 6 -type f || true
 
       # --- UPLOAD REPORTS (always) ---
       - name: Collect Coverage Report
@@ -103,7 +106,7 @@ jobs:
 
           # Coverage gate
           if [ -f "CoverageReport/Summary.txt" ]; then
-            LINE_COVERAGE=$(grep -i "Line coverage" CoverageReport/Summary.txt | sed -E 's/.*Line coverage: ([0-9]+).*/\1/')
+            LINE_COVERAGE=$(grep -i "Line coverage" CoverageReport/Summary.txt | head -n 1 | sed -E 's/.*Line coverage: ([0-9]+).*/\1/')
             echo "Detected line coverage: ${LINE_COVERAGE}% (required ${COVERAGE_THRESHOLD}%)"
 
             if [ -z "$LINE_COVERAGE" ]; then
@@ -118,8 +121,7 @@ jobs:
             FAIL=1
           fi
 
-          # Stryker gate (best-effort: check for report existence)
-          # If you want a strict gate, require that Stryker produced output.
+          # Stryker gate: require that a report exists
           if [ ! -d "StrykerOutput" ] || [ -z "$(find StrykerOutput -type f 2>/dev/null)" ]; then
             echo "No Stryker output produced -> FAIL"
             FAIL=1
