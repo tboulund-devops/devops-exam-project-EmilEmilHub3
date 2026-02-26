@@ -8,10 +8,11 @@
             "low": 50
         },
         "mutate": [
-            "SimpleShop.Api/**/*.cs",
-            "!SimpleShop.Api/**/Migrations/**",
-            "!SimpleShop.Api/**/Program.cs",
-            "!SimpleShop.Api/**/*DbContext*.cs"
+            "**/*.cs",
+            "!**/Migrations/**",
+            "!**/Program.cs",
+            "!**/*DbContext*.cs",
+            "!**/*ModelSnapshot*.cs"
         ]
     }
 }
