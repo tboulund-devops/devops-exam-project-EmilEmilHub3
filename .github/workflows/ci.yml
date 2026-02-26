@@ -38,7 +38,6 @@ jobs:
 
       # ---------------- TEST + COVERAGE (always produce report) ----------------
       - name: Run unit tests (with coverage)
-        id: tests
         continue-on-error: true
         run: |
           dotnet test SimpleShop.sln -c $CONFIGURATION --no-build \
@@ -69,26 +68,22 @@ jobs:
           fi
           echo "========================================"
 
-      # ---------------- STRYKER (always produce report) ----------------
+      # ---------------- STRYKER (always attempt + always upload report if it exists) ----------------
       - name: Run Mutation Tests (Stryker)
         if: always()
-        id: stryker
         continue-on-error: true
         run: |
           set +e
-          dotnet stryker --config-file ./stryker-config.json
-          STRYKER_EXIT=$?
-          echo "STRYKER_EXIT=$STRYKER_EXIT" >> $GITHUB_ENV
-          echo "Stryker exit code: $STRYKER_EXIT"
-          exit 0
+          dotnet stryker --config-file stryker-config.json
+          echo "STRYKER_EXIT_CODE=$?" >> $GITHUB_ENV
 
       - name: Debug Stryker output
         if: always()
         run: |
           echo "---- Root ----"
           ls -la
-          echo "---- StrykerOutput tree ----"
-          find StrykerOutput -maxdepth 6 -type f -print || true
+          echo "---- StrykerOutput ----"
+          find StrykerOutput -maxdepth 8 -type f || true
 
       # ---------------- UPLOAD REPORTS (always) ----------------
       - name: Upload Coverage Report
@@ -107,21 +102,18 @@ jobs:
           path: StrykerOutput
           if-no-files-found: warn
 
-      # ---------------- QUALITY GATE (fail at end, after uploads) ----------------
+      # ---------------- QUALITY GATE (fail at end, AFTER artifacts) ----------------
       - name: Enforce thresholds (fail job at end)
         if: always()
         run: |
           FAIL=0
 
-          # Coverage gate
+          # COVERAGE CHECK
           if [ -f "CoverageReport/Summary.txt" ]; then
             LINE_COVERAGE=$(grep -i "Line coverage" CoverageReport/Summary.txt | head -n 1 | sed -E 's/.*Line coverage: ([0-9]+).*/\1/')
             echo "Detected line coverage: ${LINE_COVERAGE}% (required ${COVERAGE_THRESHOLD}%)"
 
-            if [ -z "$LINE_COVERAGE" ]; then
-              echo "Could not parse coverage -> FAIL"
-              FAIL=1
-            elif [ "$LINE_COVERAGE" -lt "$COVERAGE_THRESHOLD" ]; then
+            if [ -z "$LINE_COVERAGE" ] || [ "$LINE_COVERAGE" -lt "$COVERAGE_THRESHOLD" ]; then
               echo "Coverage threshold not met -> FAIL"
               FAIL=1
             fi
@@ -130,28 +122,23 @@ jobs:
             FAIL=1
           fi
 
-          # Stryker gate:
-          # 1) kræv at rapport faktisk findes
-          if [ -z "$(find StrykerOutput -type f 2>/dev/null)" ]; then
+          # STRYKER CHECK
+          # 1) kræv at der er output (rapport)
+          if [ ! -d "StrykerOutput" ] || [ -z "$(find StrykerOutput -type f 2>/dev/null)" ]; then
             echo "Stryker output missing -> FAIL"
             FAIL=1
-          else
-            echo "Stryker output exists."
           fi
 
-          # 2) kræv at Stryker ikke fejlede (exit code 0)
-          # (thresholds håndteres af stryker-config.json)
-          if [ -z "${STRYKER_EXIT}" ]; then
-            echo "Stryker exit code not captured -> FAIL"
-            FAIL=1
-          elif [ "${STRYKER_EXIT}" -ne 0 ]; then
-            echo "Stryker exit code was ${STRYKER_EXIT} -> FAIL"
+          # 2) hvis Stryker exit code ikke var 0, så fail
+          echo "Stryker exit code: ${STRYKER_EXIT_CODE:-unknown}"
+          if [ "${STRYKER_EXIT_CODE:-1}" -ne 0 ]; then
+            echo "Stryker thresholds not met or Stryker failed -> FAIL"
             FAIL=1
           fi
 
           if [ "$FAIL" -eq 1 ]; then
-            echo "One or more thresholds/gates failed."
+            echo "One or more thresholds failed."
             exit 1
           fi
 
-          echo "All thresholds/gates passed."
+          echo "All thresholds passed."
