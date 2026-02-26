@@ -28,6 +28,7 @@ public class ProductsControllerTests
         // Assert
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var products = Assert.IsType<List<Product>>(ok.Value);
+
         Assert.Single(products);
         Assert.Equal("Milk", products[0].Name);
     }
@@ -37,8 +38,15 @@ public class ProductsControllerTests
     {
         // Arrange
         var repo = new Mock<IProductRepository>();
+
         repo.Setup(r => r.AddAsync(It.IsAny<Product>()))
-            .ReturnsAsync((Product p) => { p.Id = 123; return p; });
+            // IMPORTANT: return a NEW product (don’t mutate input)
+            .ReturnsAsync((Product p) => new Product
+            {
+                Id = 123,
+                Name = p.Name,
+                Price = p.Price
+            });
 
         var service = new ProductService(repo.Object);
         var controller = new ProductsController(service);
@@ -56,6 +64,8 @@ public class ProductsControllerTests
         Assert.Equal(123, body.Id);
         Assert.Equal("Milk", body.Name);
         Assert.Equal(12.5m, body.Price);
+
+        repo.Verify(r => r.AddAsync(It.IsAny<Product>()), Times.Once);
     }
 
     [Fact]
@@ -75,11 +85,12 @@ public class ProductsControllerTests
         var bad = Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.NotNull(bad.Value);
 
-        // Value er et anonymt objekt: new { error = "..." }
         var errorProp = bad.Value!.GetType().GetProperty("error");
         Assert.NotNull(errorProp);
 
         var errorMessage = errorProp!.GetValue(bad.Value) as string;
         Assert.False(string.IsNullOrWhiteSpace(errorMessage));
+
+        repo.Verify(r => r.AddAsync(It.IsAny<Product>()), Times.Never);
     }
 }

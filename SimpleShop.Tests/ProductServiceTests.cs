@@ -47,11 +47,16 @@ public class ProductServiceTests
         // Arrange
         var repo = new Mock<IProductRepository>();
 
+        Product? captured = null;
+
         repo.Setup(r => r.AddAsync(It.IsAny<Product>()))
-            .ReturnsAsync((Product p) =>
+            .Callback<Product>(p => captured = p)
+            // IMPORTANT: return a NEW product (don’t mutate the input arg)
+            .ReturnsAsync((Product p) => new Product
             {
-                p.Id = 1;
-                return p;
+                Id = 1,
+                Name = p.Name,
+                Price = p.Price
             });
 
         var service = new ProductService(repo.Object);
@@ -65,11 +70,12 @@ public class ProductServiceTests
         Assert.Equal("Milk", created.Name);
         Assert.Equal(12.5m, created.Price);
 
-        repo.Verify(r => r.AddAsync(It.Is<Product>(p =>
-            p.Name == "Milk" &&
-            p.Price == 12.5m &&
-            p.Id == 0   // før repo “giver” Id, skal den typisk være default
-        )), Times.Once);
+        repo.Verify(r => r.AddAsync(It.IsAny<Product>()), Times.Once);
+
+        Assert.NotNull(captured);
+        Assert.Equal("Milk", captured!.Name);     // trimmed before repo call
+        Assert.Equal(12.5m, captured.Price);
+        Assert.Equal(0, captured.Id);             // default before persistence
     }
 
     [Fact]
