@@ -36,7 +36,7 @@ jobs:
       - name: Build
         run: dotnet build -c $CONFIGURATION --no-restore
 
-      # --- TEST + COVERAGE (always attempt) ---
+      # ---------------- TEST + COVERAGE ----------------
       - name: Run unit tests (with coverage)
         continue-on-error: true
         run: |
@@ -61,18 +61,23 @@ jobs:
             -reporttypes:"Html;TextSummary" \
             -filefilters:"-**/Migrations/**;-**/Program.cs;-**/*DbContext*.cs" || true
 
+          echo "=========== COVERAGE SUMMARY ==========="
           if [ -f "CoverageReport/Summary.txt" ]; then
             cat CoverageReport/Summary.txt
           else
-            echo "CoverageReport/Summary.txt not found (tests may have failed)."
+            echo "No Summary.txt found"
           fi
+          echo "========================================"
 
-      # --- MUTATION (always attempt) ---
+      # ---------------- STRYKER ----------------
       - name: Run Mutation Tests (Stryker)
         if: always()
         continue-on-error: true
         run: |
-          dotnet stryker --config-file stryker-config.json || true
+          dotnet stryker \
+            --config-file stryker-config.json \
+            --output StrykerOutput \
+            --reporters "html,progress" || true
 
       - name: Debug Stryker output
         if: always()
@@ -80,9 +85,9 @@ jobs:
           echo "---- Root ----"
           ls -la
           echo "---- StrykerOutput ----"
-          find StrykerOutput -maxdepth 6 -type f || true
+          ls -la StrykerOutput || true
 
-      # --- UPLOAD REPORTS (always) ---
+      # ---------------- UPLOAD REPORTS ----------------
       - name: Collect Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -99,40 +104,37 @@ jobs:
           path: StrykerOutput
           if-no-files-found: warn
 
-      # --- QUALITY GATES (fail at the end, after artifacts exist) ---
+      # ---------------- QUALITY GATE ----------------
       - name: Enforce thresholds (fail job at end)
         if: always()
         run: |
           FAIL=0
 
-          # Coverage gate
+          # COVERAGE CHECK
           if [ -f "CoverageReport/Summary.txt" ]; then
             LINE_COVERAGE=$(grep -i "Line coverage" CoverageReport/Summary.txt | head -n 1 | sed -E 's/.*Line coverage: ([0-9]+).*/\1/')
             echo "Detected line coverage: ${LINE_COVERAGE}% (required ${COVERAGE_THRESHOLD}%)"
 
-            if [ -z "$LINE_COVERAGE" ]; then
-              echo "Could not parse coverage -> FAIL"
-              FAIL=1
-            elif [ "$LINE_COVERAGE" -lt "$COVERAGE_THRESHOLD" ]; then
-              echo "Coverage threshold not met -> FAIL"
+            if [ -z "$LINE_COVERAGE" ] || [ "$LINE_COVERAGE" -lt "$COVERAGE_THRESHOLD" ]; then
+              echo "Coverage threshold not met"
               FAIL=1
             fi
           else
-            echo "No coverage summary -> FAIL"
+            echo "Coverage summary missing"
             FAIL=1
           fi
 
-          # Stryker gate: kræv at der er output
-          if [ ! -d "StrykerOutput" ] || [ -z "$(find StrykerOutput -type f 2>/dev/null)" ]; then
-            echo "No Stryker output produced -> FAIL"
-            FAIL=1
+          # STRYKER CHECK (kun hvis folder findes)
+          if [ -d "StrykerOutput" ] && [ "$(ls -A StrykerOutput)" ]; then
+            echo "Stryker output exists"
           else
-            echo "Stryker output exists."
+            echo "Stryker output missing"
+            FAIL=1
           fi
 
           if [ "$FAIL" -eq 1 ]; then
-            echo "One or more thresholds/gates failed."
+            echo "One or more thresholds failed."
             exit 1
           fi
 
-          echo "All thresholds/gates passed."
+          echo "All thresholds passed."
