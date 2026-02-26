@@ -10,6 +10,7 @@
         "mutate": [
             "**/*.cs",
             "!**/Migrations/**",
+            "!**/Models/**",
             "!**/Program.cs",
             "!**/*DbContext*.cs",
             "!**/*ModelSnapshot*.cs"
