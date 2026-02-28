@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -40,7 +42,15 @@ jobs:
         continue-on-error: true
         run: |
           set +e
-          dotnet sonarscanner begin /k:"SimpleShop" /d:sonar.host.url="http://sonarqube.setgo.dk:9000" /d:sonar.token="sqp_60b6d96df4c05117fbde7c59b0a94c4a184856e9" /d:sonar.coverageReportPaths="CoverageReport/SonarQube.xml" /d:sonar.qualitygate.wait=true /d:sonar.qualitygate.timeout=300
+          dotnet sonarscanner begin \
+            /k:"SimpleShop" \
+            /d:sonar.host.url="http://sonarqube.setgo.dk:9000" \
+            /d:sonar.token="sqp_60b6d96df4c05117fbde7c59b0a94c4a184856e9" \
+            /d:sonar.coverageReportPaths="CoverageReport/SonarQube.xml" \
+            /d:sonar.qualitygate.wait=true \
+            /d:sonar.qualitygate.timeout=300 \
+            /d:sonar.exclusions="CoverageReport/**,StrykerOutput/**" \
+            /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/*DbContext*.cs"
           EXIT_CODE=$?
           echo "SONAR_BEGIN_EXIT=$EXIT_CODE" >> $GITHUB_ENV
           if [ "$EXIT_CODE" -eq 0 ]; then
