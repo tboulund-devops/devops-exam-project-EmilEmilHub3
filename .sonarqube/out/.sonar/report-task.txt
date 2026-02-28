@@ -1,0 +1,6 @@
+projectKey=SimpleShop
+serverUrl=http://sonarqube.setgo.dk:9000
+serverVersion=25.1.0.102122
+dashboardUrl=http://sonarqube.setgo.dk:9000/dashboard?id=SimpleShop
+ceTaskId=2e7ba838-7843-4a26-9f3a-c2eb51b49c24
+ceTaskUrl=http://sonarqube.setgo.dk:9000/api/ce/task?id=2e7ba838-7843-4a26-9f3a-c2eb51b49c24

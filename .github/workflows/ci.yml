@@ -28,10 +28,27 @@ jobs:
         run: |
           dotnet tool install --global dotnet-reportgenerator-globaltool
           dotnet tool install --global dotnet-stryker
+          dotnet tool install --global dotnet-sonarscanner
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Restore
         run: dotnet restore
+
+      # ---------------- SONARQUBE BEGIN ----------------
+      - name: SonarQube - Begin
+        id: sonar_begin
+        continue-on-error: true
+        run: |
+          set +e
+          dotnet sonarscanner begin /k:"SimpleShop" /d:sonar.host.url="http://sonarqube.setgo.dk:9000" /d:sonar.token="sqp_60b6d96df4c05117fbde7c59b0a94c4a184856e9" /d:sonar.coverageReportPaths="CoverageReport/SonarQube.xml" /d:sonar.qualitygate.wait=true /d:sonar.qualitygate.timeout=300
+          EXIT_CODE=$?
+          echo "SONAR_BEGIN_EXIT=$EXIT_CODE" >> $GITHUB_ENV
+          if [ "$EXIT_CODE" -eq 0 ]; then
+            echo "SONAR_ENABLED=1" >> $GITHUB_ENV
+          else
+            echo "SONAR_ENABLED=0" >> $GITHUB_ENV
+          fi
+          exit 0
 
       - name: Build
         run: dotnet build -c $CONFIGURATION --no-restore
@@ -52,14 +69,14 @@ jobs:
           mkdir -p CoverageReport
           mkdir -p StrykerOutput
 
-      - name: Generate coverage report (Html + TextSummary)
+      - name: Generate coverage report (Html + TextSummary + SonarQube)
         if: always()
         continue-on-error: true
         run: |
           reportgenerator \
             -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"CoverageReport" \
-            -reporttypes:"Html;TextSummary" \
+            -reporttypes:"Html;TextSummary;SonarQube" \
             -filefilters:"-**/Migrations/**;-**/Program.cs;-**/*DbContext*.cs" || true
 
           echo "=========== COVERAGE SUMMARY ==========="
@@ -69,6 +86,25 @@ jobs:
             echo "No Summary.txt found"
           fi
           echo "========================================"
+
+          echo "=========== SONARQUBE COVERAGE FILE ==========="
+          if [ -f "CoverageReport/SonarQube.xml" ]; then
+            echo "Found CoverageReport/SonarQube.xml"
+          else
+            echo "Missing CoverageReport/SonarQube.xml"
+          fi
+          echo "================================================"
+
+      # ---------------- SONARQUBE END ----------------
+      - name: SonarQube - End
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ "${SONAR_ENABLED}" = "1" ]; then
+            dotnet sonarscanner end /d:sonar.token="sqp_60b6d96df4c05117fbde7c59b0a94c4a184856e9"
+          else
+            echo "Skipping SonarQube end because begin failed."
+          fi
 
       # ---------------- STRYKER (always attempt) ----------------
       - name: Run Mutation Tests (Stryker)
