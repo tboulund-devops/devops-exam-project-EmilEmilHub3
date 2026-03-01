@@ -17,10 +17,10 @@ public class ProductService
     public Task<Product> CreateAsync(CreateProductDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
-            throw new ArgumentException("Name is required.", nameof(dto.Name));
+            throw new ArgumentException("Name is required.", nameof(dto));
 
         if (dto.Price < 0)
-            throw new ArgumentException("Price cannot be negative.", nameof(dto.Price));
+            throw new ArgumentException("Price cannot be negative.", nameof(dto));
 
         var product = new Product
         {
