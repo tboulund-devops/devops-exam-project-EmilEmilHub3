@@ -25,7 +25,7 @@ public class ProductService
         var product = new Product
         {
             Name = dto.Name.Trim(),
-            Price = dto.Price
+            Price = dto.Price.HasValue ? dto.Price.Value : 0
         };
 
         return _repo.AddAsync(product);
