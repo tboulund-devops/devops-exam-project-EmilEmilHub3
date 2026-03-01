@@ -40,30 +40,41 @@ jobs:
       - name: SonarQube - Begin
         id: sonar_begin
         continue-on-error: true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
         run: |
           set +e
+
+          SONAR_HOST_URL="${SONAR_HOST_URL:-http://sonarqube.setgo.dk:9000}"
+          SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-SimpleShop}"
+
           dotnet sonarscanner begin \
-            /k:"SimpleShop" \
-            /d:sonar.host.url="http://sonarqube.setgo.dk:9000" \
-            /d:sonar.token="Sonar_Token" \
+            /k:"$SONAR_PROJECT_KEY" \
+            /d:sonar.host.url="$SONAR_HOST_URL" \
+            /d:sonar.token="$SONAR_TOKEN" \
             /d:sonar.coverageReportPaths="CoverageReport/SonarQube.xml" \
             /d:sonar.qualitygate.wait=true \
             /d:sonar.qualitygate.timeout=300 \
             /d:sonar.exclusions="CoverageReport/**,StrykerOutput/**" \
             /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/*DbContext*.cs"
+
           EXIT_CODE=$?
           echo "SONAR_BEGIN_EXIT=$EXIT_CODE" >> $GITHUB_ENV
+
           if [ "$EXIT_CODE" -eq 0 ]; then
             echo "SONAR_ENABLED=1" >> $GITHUB_ENV
           else
             echo "SONAR_ENABLED=0" >> $GITHUB_ENV
           fi
+
           exit 0
 
       - name: Build
         run: dotnet build -c $CONFIGURATION --no-restore
 
-      # ---------------- TEST + COVERAGE (always attempt) ----------------
+      # ---------------- TEST + COVERAGE ----------------
       - name: Run unit tests (with coverage)
         id: tests
         continue-on-error: true
@@ -97,26 +108,20 @@ jobs:
           fi
           echo "========================================"
 
-          echo "=========== SONARQUBE COVERAGE FILE ==========="
-          if [ -f "CoverageReport/SonarQube.xml" ]; then
-            echo "Found CoverageReport/SonarQube.xml"
-          else
-            echo "Missing CoverageReport/SonarQube.xml"
-          fi
-          echo "================================================"
-
       # ---------------- SONARQUBE END ----------------
       - name: SonarQube - End
         if: always()
         continue-on-error: true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           if [ "${SONAR_ENABLED}" = "1" ]; then
-            dotnet sonarscanner end /d:sonar.token="Sonar_Token"
+            dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
           else
             echo "Skipping SonarQube end because begin failed."
           fi
 
-      # ---------------- STRYKER (always attempt) ----------------
+      # ---------------- STRYKER ----------------
       - name: Run Mutation Tests (Stryker)
         if: always()
         continue-on-error: true
@@ -125,7 +130,6 @@ jobs:
           dotnet stryker --config-file stryker-config.json
           echo "STRYKER_EXIT_CODE=$?" >> $GITHUB_ENV
 
-          # Ensure something ends up in StrykerOutput root (so upload always finds files)
           REPORT=$(find StrykerOutput -type f -name "mutation-report.html" | head -n 1)
           if [ -n "$REPORT" ]; then
             cp "$REPORT" StrykerOutput/mutation-report.html
@@ -134,14 +138,12 @@ jobs:
       - name: Debug outputs
         if: always()
         run: |
-          echo "---- Root ----"
-          ls -la
           echo "---- CoverageReport ----"
           find CoverageReport -maxdepth 3 -type f || true
           echo "---- StrykerOutput ----"
           find StrykerOutput -maxdepth 8 -type f || true
 
-      # ---------------- UPLOAD REPORTS (always) ----------------
+      # ---------------- UPLOAD REPORTS ----------------
       - name: Upload Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -158,15 +160,14 @@ jobs:
           path: StrykerOutput
           if-no-files-found: warn
 
-      # ---------------- QUALITY GATE (fail at end, AFTER artifacts) ----------------
+      # ---------------- QUALITY GATE ----------------
       - name: Enforce thresholds (fail job at end)
         if: always()
         run: |
           FAIL=0
 
-          # --- COVERAGE CHECK ---
+          # Coverage check
           if [ -f "CoverageReport/Summary.txt" ]; then
-            # Extract number (can be "33.5%" etc.) -> take integer part
             LINE_COVERAGE_RAW=$(grep -i "Line coverage" CoverageReport/Summary.txt | head -n 1 | sed -E 's/.*Line coverage: *([0-9]+(\.[0-9]+)?).*/\1/')
             LINE_COVERAGE_INT=$(echo "$LINE_COVERAGE_RAW" | awk -F. '{print $1}')
 
@@ -181,14 +182,13 @@ jobs:
             FAIL=1
           fi
 
-          # --- STRYKER CHECK ---
+          # Stryker check
           echo "Stryker exit code: ${STRYKER_EXIT_CODE:-unknown}"
           if [ "${STRYKER_EXIT_CODE:-1}" -ne 0 ]; then
             echo "Stryker failed or thresholds not met -> FAIL"
             FAIL=1
           fi
 
-          # Require that Stryker produced a report file
           if [ ! -f "StrykerOutput/mutation-report.html" ] && [ -z "$(find StrykerOutput -type f 2>/dev/null)" ]; then
             echo "Stryker report missing -> FAIL"
             FAIL=1
