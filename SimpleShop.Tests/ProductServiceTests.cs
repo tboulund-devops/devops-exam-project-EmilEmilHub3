@@ -51,7 +51,6 @@ public class ProductServiceTests
 
         repo.Setup(r => r.AddAsync(It.IsAny<Product>()))
             .Callback<Product>(p => captured = p)
-            // IMPORTANT: return a NEW product (don’t mutate the input arg)
             .ReturnsAsync((Product p) => new Product
             {
                 Id = 1,

@@ -40,7 +40,6 @@ public class ProductsControllerTests
         var repo = new Mock<IProductRepository>();
 
         repo.Setup(r => r.AddAsync(It.IsAny<Product>()))
-            // IMPORTANT: return a NEW product (don’t mutate input)
             .ReturnsAsync((Product p) => new Product
             {
                 Id = 123,

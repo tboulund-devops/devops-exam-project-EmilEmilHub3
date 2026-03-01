@@ -45,7 +45,7 @@ jobs:
           dotnet sonarscanner begin \
             /k:"SimpleShop" \
             /d:sonar.host.url="http://sonarqube.setgo.dk:9000" \
-            /d:sonar.token="sqp_60b6d96df4c05117fbde7c59b0a94c4a184856e9" \
+            /d:sonar.token="Sonar_Token" \
             /d:sonar.coverageReportPaths="CoverageReport/SonarQube.xml" \
             /d:sonar.qualitygate.wait=true \
             /d:sonar.qualitygate.timeout=300 \
@@ -111,7 +111,7 @@ jobs:
         continue-on-error: true
         run: |
           if [ "${SONAR_ENABLED}" = "1" ]; then
-            dotnet sonarscanner end /d:sonar.token="sqp_60b6d96df4c05117fbde7c59b0a94c4a184856e9"
+            dotnet sonarscanner end /d:sonar.token="Sonar_Token"
           else
             echo "Skipping SonarQube end because begin failed."
           fi
