@@ -15,14 +15,26 @@ public class ProductsController : ControllerBase
         _service = service;
     }
 
-    // Week 6 Feature 1: GET /api/products
     [HttpGet]
     public async Task<ActionResult<List<Product>>> GetAll()
     {
         return Ok(await _service.GetAllAsync());
     }
 
-    // Week 6 Feature 2: POST /api/products
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<Product>> GetById(int id)
+    {
+        try
+        {
+            var product = await _service.GetByIdAsync(id);
+            return product is null ? NotFound() : Ok(product);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPost]
     public async Task<ActionResult<Product>> Create([FromBody] CreateProductDto dto)
     {
@@ -30,6 +42,20 @@ public class ProductsController : ControllerBase
         {
             var created = await _service.CreateAsync(dto);
             return Created($"/api/products/{created.Id}", created);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<Product>> Update(int id, [FromBody] CreateProductDto dto)
+    {
+        try
+        {
+            var updated = await _service.UpdateAsync(id, dto);
+            return updated is null ? NotFound() : Ok(updated);
         }
         catch (ArgumentException ex)
         {
