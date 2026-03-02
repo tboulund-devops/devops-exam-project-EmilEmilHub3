@@ -9,6 +9,8 @@ public class ProductRepositoryTests
 {
     private static AppDbContext CreateDb()
     {
+        // Create a fresh in-memory database for each test
+        // (Unique DB name avoids cross-test state bleed)
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
@@ -22,7 +24,12 @@ public class ProductRepositoryTests
         // Arrange
         await using var db = CreateDb();
         var repo = new ProductRepository(db);
-        var product = new Product { Name = "Milk", Price = 12.5m };
+
+        var product = new Product
+        {
+            Name = "Milk",
+            Price = 12.5m
+        };
 
         // Act
         var created = await repo.AddAsync(product);
@@ -40,12 +47,12 @@ public class ProductRepositoryTests
     {
         // Arrange
         await using var db = CreateDb();
+        var repo = new ProductRepository(db);
 
+        // Seed with explicit IDs to verify ordering
         db.Products.Add(new Product { Id = 2, Name = "B", Price = 2m });
         db.Products.Add(new Product { Id = 1, Name = "A", Price = 1m });
         await db.SaveChangesAsync();
-
-        var repo = new ProductRepository(db);
 
         // Act
         var result = await repo.GetAllAsync();
@@ -61,10 +68,10 @@ public class ProductRepositoryTests
     {
         // Arrange
         await using var db = CreateDb();
+        var repo = new ProductRepository(db);
+
         db.Products.Add(new Product { Id = 1, Name = "Milk", Price = 10m });
         await db.SaveChangesAsync();
-
-        var repo = new ProductRepository(db);
 
         // Act
         var result = await repo.GetByIdAsync(1);
@@ -93,15 +100,21 @@ public class ProductRepositoryTests
     public async Task UpdateAsync_WhenCalled_UpdatesProduct()
     {
         // Arrange
+        // We add a product first. EF Core will track that entity in the DbContext.
         await using var db = CreateDb();
+        var repo = new ProductRepository(db);
+
         db.Products.Add(new Product { Id = 1, Name = "Milk", Price = 10m });
         await db.SaveChangesAsync();
 
-        var repo = new ProductRepository(db);
-        var toUpdate = new Product { Id = 1, Name = "Milk 2", Price = 20m };
+        var tracked = await db.Products.FindAsync(1);
+        Assert.NotNull(tracked);
+
+        tracked!.Name = "Milk 2";
+        tracked.Price = 20m;
 
         // Act
-        var updated = await repo.UpdateAsync(toUpdate);
+        var updated = await repo.UpdateAsync(tracked);
 
         // Assert
         Assert.Equal(1, updated.Id);
