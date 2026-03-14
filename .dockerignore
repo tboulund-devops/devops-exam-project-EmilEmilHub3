@@ -1,0 +1,9 @@
+.git
+.gitignore
+bin
+obj
+TestResults
+CoverageReport
+StrykerOutput
+node_modules
+.env
