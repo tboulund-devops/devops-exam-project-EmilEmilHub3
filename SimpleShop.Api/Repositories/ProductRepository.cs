@@ -13,9 +13,18 @@ public class ProductRepository : IProductRepository
         _db = db;
     }
 
-    public Task<List<Product>> GetAllAsync()
+    public Task<List<Product>> GetAllAsync(string? search = null)
     {
-        return _db.Products.AsNoTracking().OrderBy(p => p.Id).ToListAsync();
+        var query = _db.Products.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalizedSearch = search.Trim().ToLower();
+
+            query = query.Where(p => p.Name.ToLower().Contains(normalizedSearch));
+        }
+
+        return query.OrderBy(p => p.Id).ToListAsync();
     }
 
     public async Task<Product> AddAsync(Product product)
@@ -35,5 +44,11 @@ public class ProductRepository : IProductRepository
         _db.Products.Update(product);
         await _db.SaveChangesAsync();
         return product;
+    }
+
+    public async Task DeleteAsync(Product product)
+    {
+        _db.Products.Remove(product);
+        await _db.SaveChangesAsync();
     }
 }

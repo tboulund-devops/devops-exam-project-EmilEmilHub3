@@ -49,9 +49,8 @@ public class ProductRepositoryTests
         await using var db = CreateDb();
         var repo = new ProductRepository(db);
 
-        // Seed with explicit IDs to verify ordering
-        db.Products.Add(new Product { Id = 2, Name = "B", Price = 2m });
-        db.Products.Add(new Product { Id = 1, Name = "A", Price = 1m });
+        db.Products.Add(new Product { Id = 2, Name = "Bread", Price = 2m });
+        db.Products.Add(new Product { Id = 1, Name = "Milk", Price = 1m });
         await db.SaveChangesAsync();
 
         // Act
@@ -61,6 +60,44 @@ public class ProductRepositoryTests
         Assert.Equal(2, result.Count);
         Assert.Equal(1, result[0].Id);
         Assert.Equal(2, result[1].Id);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithSearch_ReturnsOnlyMatchingProducts()
+    {
+        // Arrange
+        await using var db = CreateDb();
+        var repo = new ProductRepository(db);
+
+        db.Products.Add(new Product { Id = 1, Name = "Milk", Price = 10m });
+        db.Products.Add(new Product { Id = 2, Name = "Chocolate Milk", Price = 15m });
+        db.Products.Add(new Product { Id = 3, Name = "Bread", Price = 20m });
+        await db.SaveChangesAsync();
+
+        // Act
+        var result = await repo.GetAllAsync("milk");
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.All(result, p => Assert.Contains("milk", p.Name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithEmptySearch_ReturnsAllProducts()
+    {
+        // Arrange
+        await using var db = CreateDb();
+        var repo = new ProductRepository(db);
+
+        db.Products.Add(new Product { Id = 1, Name = "Milk", Price = 10m });
+        db.Products.Add(new Product { Id = 2, Name = "Bread", Price = 20m });
+        await db.SaveChangesAsync();
+
+        // Act
+        var result = await repo.GetAllAsync("");
+
+        // Assert
+        Assert.Equal(2, result.Count);
     }
 
     [Fact]
@@ -100,7 +137,6 @@ public class ProductRepositoryTests
     public async Task UpdateAsync_WhenCalled_UpdatesProduct()
     {
         // Arrange
-        // We add a product first. EF Core will track that entity in the DbContext.
         await using var db = CreateDb();
         var repo = new ProductRepository(db);
 
@@ -125,5 +161,27 @@ public class ProductRepositoryTests
         Assert.NotNull(fromDb);
         Assert.Equal("Milk 2", fromDb!.Name);
         Assert.Equal(20m, fromDb.Price);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenCalled_RemovesProductFromDatabase()
+    {
+        // Arrange
+        await using var db = CreateDb();
+        var repo = new ProductRepository(db);
+
+        db.Products.Add(new Product { Id = 1, Name = "Milk", Price = 10m });
+        await db.SaveChangesAsync();
+
+        var product = await db.Products.FindAsync(1);
+        Assert.NotNull(product);
+
+        // Act
+        await repo.DeleteAsync(product!);
+
+        // Assert
+        var fromDb = await db.Products.FindAsync(1);
+        Assert.Null(fromDb);
+        Assert.Equal(0, await db.Products.CountAsync());
     }
 }

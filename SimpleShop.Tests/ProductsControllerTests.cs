@@ -10,11 +10,11 @@ namespace SimpleShop.Tests;
 public class ProductsControllerTests
 {
     [Fact]
-    public async Task GetAll_ReturnsOk_WithProducts()
+    public async Task GetAll_WithoutSearch_ReturnsOk_WithProducts()
     {
         // Arrange
         var repo = new Mock<IProductRepository>();
-        repo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Product>
+        repo.Setup(r => r.GetAllAsync(null)).ReturnsAsync(new List<Product>
         {
             new() { Id = 1, Name = "Milk", Price = 10m }
         });
@@ -23,7 +23,7 @@ public class ProductsControllerTests
         var controller = new ProductsController(service);
 
         // Act
-        var result = await controller.GetAll();
+        var result = await controller.GetAll(null);
 
         // Assert
         var ok = Assert.IsType<OkObjectResult>(result.Result);
@@ -31,6 +31,31 @@ public class ProductsControllerTests
 
         Assert.Single(products);
         Assert.Equal("Milk", products[0].Name);
+    }
+
+    [Fact]
+    public async Task GetAll_WithSearch_ReturnsFilteredProducts()
+    {
+        // Arrange
+        var repo = new Mock<IProductRepository>();
+        repo.Setup(r => r.GetAllAsync("milk")).ReturnsAsync(new List<Product>
+        {
+            new() { Id = 1, Name = "Milk", Price = 10m }
+        });
+
+        var service = new ProductService(repo.Object);
+        var controller = new ProductsController(service);
+
+        // Act
+        var result = await controller.GetAll("milk");
+
+        // Assert
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var products = Assert.IsType<List<Product>>(ok.Value);
+
+        Assert.Single(products);
+        Assert.Equal("Milk", products[0].Name);
+        repo.Verify(r => r.GetAllAsync("milk"), Times.Once);
     }
 
     [Fact]
@@ -230,5 +255,68 @@ public class ProductsControllerTests
 
         repo.Verify(r => r.GetByIdAsync(It.IsAny<int>()), Times.Never);
         repo.Verify(r => r.UpdateAsync(It.IsAny<Product>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Delete_WhenProductExists_ReturnsNoContent()
+    {
+        // Arrange
+        var repo = new Mock<IProductRepository>();
+        repo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(new Product { Id = 1, Name = "Milk", Price = 10m });
+        repo.Setup(r => r.DeleteAsync(It.IsAny<Product>())).Returns(Task.CompletedTask);
+
+        var service = new ProductService(repo.Object);
+        var controller = new ProductsController(service);
+
+        // Act
+        var result = await controller.Delete(1);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+        repo.Verify(r => r.GetByIdAsync(1), Times.Once);
+        repo.Verify(r => r.DeleteAsync(It.IsAny<Product>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Delete_WhenProductDoesNotExist_ReturnsNotFound()
+    {
+        // Arrange
+        var repo = new Mock<IProductRepository>();
+        repo.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((Product?)null);
+
+        var service = new ProductService(repo.Object);
+        var controller = new ProductsController(service);
+
+        // Act
+        var result = await controller.Delete(999);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
+        repo.Verify(r => r.DeleteAsync(It.IsAny<Product>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Delete_WhenIdInvalid_ReturnsBadRequest()
+    {
+        // Arrange
+        var repo = new Mock<IProductRepository>();
+        var service = new ProductService(repo.Object);
+        var controller = new ProductsController(service);
+
+        // Act
+        var result = await controller.Delete(0);
+
+        // Assert
+        var bad = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.NotNull(bad.Value);
+
+        var errorProp = bad.Value!.GetType().GetProperty("error");
+        Assert.NotNull(errorProp);
+
+        var errorMessage = errorProp!.GetValue(bad.Value) as string;
+        Assert.False(string.IsNullOrWhiteSpace(errorMessage));
+
+        repo.Verify(r => r.GetByIdAsync(It.IsAny<int>()), Times.Never);
+        repo.Verify(r => r.DeleteAsync(It.IsAny<Product>()), Times.Never);
     }
 }

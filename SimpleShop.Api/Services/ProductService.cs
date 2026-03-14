@@ -12,7 +12,10 @@ public class ProductService
         _repo = repo;
     }
 
-    public Task<List<Product>> GetAllAsync() => _repo.GetAllAsync();
+    public Task<List<Product>> GetAllAsync(string? search = null)
+    {
+        return _repo.GetAllAsync(search);
+    }
 
     public Task<Product?> GetByIdAsync(int id)
     {
@@ -58,5 +61,18 @@ public class ProductService
         existing.Price = dto.Price.HasValue ? dto.Price.Value : 0;
 
         return await _repo.UpdateAsync(existing);
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        if (id <= 0)
+            throw new ArgumentException("Id must be greater than 0.", nameof(id));
+
+        var existing = await _repo.GetByIdAsync(id);
+        if (existing is null)
+            return false;
+
+        await _repo.DeleteAsync(existing);
+        return true;
     }
 }

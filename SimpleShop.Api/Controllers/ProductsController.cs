@@ -16,9 +16,9 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<Product>>> GetAll()
+    public async Task<ActionResult<List<Product>>> GetAll([FromQuery] string? search)
     {
-        return Ok(await _service.GetAllAsync());
+        return Ok(await _service.GetAllAsync(search));
     }
 
     [HttpGet("{id:int}")]
@@ -56,6 +56,20 @@ public class ProductsController : ControllerBase
         {
             var updated = await _service.UpdateAsync(id, dto);
             return updated is null ? NotFound() : Ok(updated);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        try
+        {
+            var deleted = await _service.DeleteAsync(id);
+            return deleted ? NoContent() : NotFound();
         }
         catch (ArgumentException ex)
         {

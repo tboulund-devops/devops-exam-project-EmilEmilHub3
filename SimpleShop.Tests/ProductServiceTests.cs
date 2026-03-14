@@ -78,7 +78,7 @@ public class ProductServiceTests
     }
 
     [Fact]
-    public async Task GetAllAsync_ReturnsListFromRepository()
+    public async Task GetAllAsync_WithoutSearch_ReturnsListFromRepository()
     {
         // Arrange
         var repo = new Mock<IProductRepository>();
@@ -88,7 +88,7 @@ public class ProductServiceTests
             new() { Id = 2, Name = "Bread", Price = 20m }
         };
 
-        repo.Setup(r => r.GetAllAsync()).ReturnsAsync(expected);
+        repo.Setup(r => r.GetAllAsync(null)).ReturnsAsync(expected);
 
         var service = new ProductService(repo.Object);
 
@@ -97,7 +97,29 @@ public class ProductServiceTests
 
         // Assert
         Assert.Same(expected, result);
-        repo.Verify(r => r.GetAllAsync(), Times.Once);
+        repo.Verify(r => r.GetAllAsync(null), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WithSearch_ForwardsSearchToRepository()
+    {
+        // Arrange
+        var repo = new Mock<IProductRepository>();
+        var expected = new List<Product>
+        {
+            new() { Id = 1, Name = "Milk", Price = 10m }
+        };
+
+        repo.Setup(r => r.GetAllAsync("milk")).ReturnsAsync(expected);
+
+        var service = new ProductService(repo.Object);
+
+        // Act
+        var result = await service.GetAllAsync("milk");
+
+        // Assert
+        Assert.Same(expected, result);
+        repo.Verify(r => r.GetAllAsync("milk"), Times.Once);
     }
 
     [Fact]
@@ -220,5 +242,60 @@ public class ProductServiceTests
         Assert.Equal("New Name", updatedCaptured!.Name);
         Assert.Equal(99m, updatedCaptured.Price);
         Assert.Equal(1, updatedCaptured.Id);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenIdIsInvalid_ThrowsArgumentException()
+    {
+        // Arrange
+        var repo = new Mock<IProductRepository>();
+        var service = new ProductService(repo.Object);
+
+        // Act
+        var act = async () => await service.DeleteAsync(0);
+
+        // Assert
+        await Assert.ThrowsAsync<ArgumentException>(act);
+        repo.Verify(r => r.GetByIdAsync(It.IsAny<int>()), Times.Never);
+        repo.Verify(r => r.DeleteAsync(It.IsAny<Product>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenProductDoesNotExist_ReturnsFalse()
+    {
+        // Arrange
+        var repo = new Mock<IProductRepository>();
+        repo.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((Product?)null);
+
+        var service = new ProductService(repo.Object);
+
+        // Act
+        var result = await service.DeleteAsync(999);
+
+        // Assert
+        Assert.False(result);
+        repo.Verify(r => r.GetByIdAsync(999), Times.Once);
+        repo.Verify(r => r.DeleteAsync(It.IsAny<Product>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenProductExists_DeletesAndReturnsTrue()
+    {
+        // Arrange
+        var repo = new Mock<IProductRepository>();
+        var product = new Product { Id = 1, Name = "Milk", Price = 10m };
+
+        repo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(product);
+        repo.Setup(r => r.DeleteAsync(product)).Returns(Task.CompletedTask);
+
+        var service = new ProductService(repo.Object);
+
+        // Act
+        var result = await service.DeleteAsync(1);
+
+        // Assert
+        Assert.True(result);
+        repo.Verify(r => r.GetByIdAsync(1), Times.Once);
+        repo.Verify(r => r.DeleteAsync(product), Times.Once);
     }
 }
