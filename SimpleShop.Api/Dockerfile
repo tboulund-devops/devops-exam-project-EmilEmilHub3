@@ -3,7 +3,6 @@ WORKDIR /src
 
 COPY SimpleShop.sln .
 COPY SimpleShop.Api/SimpleShop.Api.csproj SimpleShop.Api/
-COPY SimpleShop.Api.Tests/SimpleShop.Api.Tests.csproj SimpleShop.Tests/
 
 RUN dotnet restore SimpleShop.Api/SimpleShop.Api.csproj
 
