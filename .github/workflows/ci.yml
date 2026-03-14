@@ -1,33 +1,79 @@
+# ============================================================
+# Continuous Integration Pipeline
+# ------------------------------------------------------------
+# This pipeline validates the codebase whenever changes are
+# pushed to the main branch or a pull request targets main.
+#
+# The pipeline performs the following tasks:
+# 1. Restore and build the solution
+# 2. Run unit tests and collect code coverage
+# 3. Analyze the code using SonarQube
+# 4. Run mutation testing using Stryker
+# 5. Generate coverage reports
+# 6. Upload reports as artifacts
+# 7. Enforce quality thresholds at the end of the job
+#
+# The pipeline is designed so that individual steps may fail
+# without immediately stopping execution. This ensures that
+# all reports are still generated and uploaded. A final
+# "Enforce thresholds" step determines whether the overall
+# job should fail.
+# ============================================================
+
 name: CI
 
+# ------------------------------------------------------------
+# Pipeline triggers
+# ------------------------------------------------------------
 on:
+  # Run pipeline when code is pushed to main
   push:
     branches: [ "main" ]
+
+  # Run pipeline when pull requests target main
   pull_request:
     branches: [ "main" ]
+
+  # Allow manual execution from the GitHub Actions UI
   workflow_dispatch:
 
 jobs:
   integration:
     runs-on: ubuntu-latest
 
+    # --------------------------------------------------------
+    # Global environment variables used throughout the job
+    # --------------------------------------------------------
     env:
       CONFIGURATION: Release
-      COVERAGE_THRESHOLD: "70"
+      COVERAGE_THRESHOLD: "70"   # Minimum acceptable code coverage
       MUTATION_HIGH: "80"
       MUTATION_LOW: "50"
 
     steps:
+
+      # ------------------------------------------------------
+      # Checkout repository source code
+      # ------------------------------------------------------
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # ------------------------------------------------------
+      # Install the required .NET SDK version
+      # ------------------------------------------------------
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
+      # ------------------------------------------------------
+      # Install required CLI tools used by the pipeline
+      # - reportgenerator (coverage reports)
+      # - stryker (mutation testing)
+      # - sonarscanner (static code analysis)
+      # ------------------------------------------------------
       - name: Install required tools
         run: |
           dotnet tool install --global dotnet-reportgenerator-globaltool
@@ -35,9 +81,19 @@ jobs:
           dotnet tool install --global dotnet-sonarscanner
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
+      # ------------------------------------------------------
+      # Restore NuGet dependencies for the solution
+      # ------------------------------------------------------
       - name: Restore
         run: dotnet restore
 
+      # ------------------------------------------------------
+      # Start SonarQube analysis
+      #
+      # continue-on-error is used so the pipeline can continue
+      # even if SonarQube is temporarily unavailable.
+      # The exit code is stored for validation later.
+      # ------------------------------------------------------
       - name: SonarQube - Begin
         id: sonar_begin
         continue-on-error: true
@@ -62,7 +118,7 @@ jobs:
             /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/*DbContext*.cs"
 
           EXIT_CODE=$?
-          echo "SONAR_BEGIN_EXIT=$EXIT_CODE" >> $GITHUB_ENV
+          echo "SONAR_BEGIN_EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
 
           if [ "$EXIT_CODE" -eq 0 ]; then
             echo "SONAR_ENABLED=1" >> $GITHUB_ENV
@@ -72,24 +128,42 @@ jobs:
 
           exit 0
 
+      # ------------------------------------------------------
+      # Build the application
+      # ------------------------------------------------------
       - name: Build
         run: dotnet build -c $CONFIGURATION --no-restore
 
+      # ------------------------------------------------------
+      # Execute unit tests and collect coverage
+      #
+      # continue-on-error ensures reports are still generated
+      # even if tests fail. The exit code is saved.
+      # ------------------------------------------------------
       - name: Run unit tests (with coverage)
         id: tests
         continue-on-error: true
         run: |
+          set +e
           dotnet test SimpleShop.sln -c $CONFIGURATION --no-build \
             --collect:"XPlat Code Coverage" \
             --results-directory ./TestResults \
             --settings ./coverlet.runsettings
+          echo "TEST_EXIT_CODE=$?" >> $GITHUB_ENV
+          exit 0
 
+      # ------------------------------------------------------
+      # Prepare directories used for generated reports
+      # ------------------------------------------------------
       - name: Prepare report folders
         if: always()
         run: |
           mkdir -p CoverageReport
           mkdir -p StrykerOutput
 
+      # ------------------------------------------------------
+      # Generate human-readable coverage reports
+      # ------------------------------------------------------
       - name: Generate coverage report (Html + TextSummary + SonarQube)
         if: always()
         continue-on-error: true
@@ -108,18 +182,28 @@ jobs:
           fi
           echo "========================================"
 
+      # ------------------------------------------------------
+      # Complete SonarQube analysis and evaluate Quality Gate
+      # ------------------------------------------------------
       - name: SonarQube - End
         if: always()
         continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
+          set +e
           if [ "${SONAR_ENABLED}" = "1" ]; then
             dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+            echo "SONAR_END_EXIT_CODE=$?" >> $GITHUB_ENV
           else
             echo "Skipping SonarQube end because begin failed."
+            echo "SONAR_END_EXIT_CODE=1" >> $GITHUB_ENV
           fi
+          exit 0
 
+      # ------------------------------------------------------
+      # Run mutation testing using Stryker
+      # ------------------------------------------------------
       - name: Run Mutation Tests (Stryker)
         if: always()
         continue-on-error: true
@@ -133,6 +217,11 @@ jobs:
             cp "$REPORT" StrykerOutput/mutation-report.html
           fi
 
+          exit 0
+
+      # ------------------------------------------------------
+      # Debug step showing generated files
+      # ------------------------------------------------------
       - name: Debug outputs
         if: always()
         run: |
@@ -141,6 +230,9 @@ jobs:
           echo "---- StrykerOutput ----"
           find StrykerOutput -maxdepth 8 -type f || true
 
+      # ------------------------------------------------------
+      # Upload generated reports as pipeline artifacts
+      # ------------------------------------------------------
       - name: Upload Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -157,10 +249,40 @@ jobs:
           path: StrykerOutput
           if-no-files-found: warn
 
+      # ------------------------------------------------------
+      # Final quality gate enforcement
+      #
+      # This step determines whether the pipeline should fail
+      # after all reports and analysis have been generated.
+      #
+      # It checks:
+      # - Unit test success
+      # - SonarQube quality gate
+      # - Code coverage threshold
+      # - Mutation testing result
+      # ------------------------------------------------------
       - name: Enforce thresholds (fail job at end)
         if: always()
         run: |
           FAIL=0
+
+          echo "Test exit code: ${TEST_EXIT_CODE:-unknown}"
+          if [ "${TEST_EXIT_CODE:-1}" -ne 0 ]; then
+            echo "Unit tests failed -> FAIL"
+            FAIL=1
+          fi
+
+          echo "SonarQube begin exit code: ${SONAR_BEGIN_EXIT_CODE:-unknown}"
+          if [ "${SONAR_BEGIN_EXIT_CODE:-1}" -ne 0 ]; then
+            echo "SonarQube begin failed -> FAIL"
+            FAIL=1
+          fi
+
+          echo "SonarQube end exit code: ${SONAR_END_EXIT_CODE:-unknown}"
+          if [ "${SONAR_END_EXIT_CODE:-1}" -ne 0 ]; then
+            echo "SonarQube quality gate failed -> FAIL"
+            FAIL=1
+          fi
 
           if [ -f "CoverageReport/Summary.txt" ]; then
             LINE_COVERAGE_RAW=$(grep -i "Line coverage" CoverageReport/Summary.txt | head -n 1 | sed -E 's/.*Line coverage: *([0-9]+(\.[0-9]+)?).*/\1/')
