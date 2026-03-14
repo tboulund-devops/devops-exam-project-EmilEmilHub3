@@ -1,0 +1,196 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+
+    env:
+      CONFIGURATION: Release
+      COVERAGE_THRESHOLD: "70"
+      MUTATION_HIGH: "80"
+      MUTATION_LOW: "50"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install required tools
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          dotnet tool install --global dotnet-stryker
+          dotnet tool install --global dotnet-sonarscanner
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: SonarQube - Begin
+        id: sonar_begin
+        continue-on-error: true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+        run: |
+          set +e
+
+          SONAR_HOST_URL="${SONAR_HOST_URL:-http://sonarqube.setgo.dk:9000}"
+          SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-SimpleShop}"
+
+          dotnet sonarscanner begin \
+            /k:"$SONAR_PROJECT_KEY" \
+            /d:sonar.host.url="$SONAR_HOST_URL" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.coverageReportPaths="CoverageReport/SonarQube.xml" \
+            /d:sonar.qualitygate.wait=true \
+            /d:sonar.qualitygate.timeout=300 \
+            /d:sonar.exclusions="CoverageReport/**,StrykerOutput/**" \
+            /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/*DbContext*.cs"
+
+          EXIT_CODE=$?
+          echo "SONAR_BEGIN_EXIT=$EXIT_CODE" >> $GITHUB_ENV
+
+          if [ "$EXIT_CODE" -eq 0 ]; then
+            echo "SONAR_ENABLED=1" >> $GITHUB_ENV
+          else
+            echo "SONAR_ENABLED=0" >> $GITHUB_ENV
+          fi
+
+          exit 0
+
+      - name: Build
+        run: dotnet build -c $CONFIGURATION --no-restore
+
+      - name: Run unit tests (with coverage)
+        id: tests
+        continue-on-error: true
+        run: |
+          dotnet test SimpleShop.sln -c $CONFIGURATION --no-build \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --settings ./coverlet.runsettings
+
+      - name: Prepare report folders
+        if: always()
+        run: |
+          mkdir -p CoverageReport
+          mkdir -p StrykerOutput
+
+      - name: Generate coverage report (Html + TextSummary + SonarQube)
+        if: always()
+        continue-on-error: true
+        run: |
+          reportgenerator \
+            -reports:"TestResults/**/coverage.cobertura.xml" \
+            -targetdir:"CoverageReport" \
+            -reporttypes:"Html;TextSummary;SonarQube" \
+            -filefilters:"-**/Migrations/**;-**/Program.cs;-**/*DbContext*.cs" || true
+
+          echo "=========== COVERAGE SUMMARY ==========="
+          if [ -f "CoverageReport/Summary.txt" ]; then
+            cat CoverageReport/Summary.txt
+          else
+            echo "No Summary.txt found"
+          fi
+          echo "========================================"
+
+      - name: SonarQube - End
+        if: always()
+        continue-on-error: true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ "${SONAR_ENABLED}" = "1" ]; then
+            dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+          else
+            echo "Skipping SonarQube end because begin failed."
+          fi
+
+      - name: Run Mutation Tests (Stryker)
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          dotnet stryker --config-file stryker-config.json
+          echo "STRYKER_EXIT_CODE=$?" >> $GITHUB_ENV
+
+          REPORT=$(find StrykerOutput -type f -name "mutation-report.html" | head -n 1)
+          if [ -n "$REPORT" ]; then
+            cp "$REPORT" StrykerOutput/mutation-report.html
+          fi
+
+      - name: Debug outputs
+        if: always()
+        run: |
+          echo "---- CoverageReport ----"
+          find CoverageReport -maxdepth 3 -type f || true
+          echo "---- StrykerOutput ----"
+          find StrykerOutput -maxdepth 8 -type f || true
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: CoverageReport
+          if-no-files-found: warn
+
+      - name: Upload Stryker Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stryker-report
+          path: StrykerOutput
+          if-no-files-found: warn
+
+      - name: Enforce thresholds (fail job at end)
+        if: always()
+        run: |
+          FAIL=0
+
+          if [ -f "CoverageReport/Summary.txt" ]; then
+            LINE_COVERAGE_RAW=$(grep -i "Line coverage" CoverageReport/Summary.txt | head -n 1 | sed -E 's/.*Line coverage: *([0-9]+(\.[0-9]+)?).*/\1/')
+            LINE_COVERAGE_INT=$(echo "$LINE_COVERAGE_RAW" | awk -F. '{print $1}')
+
+            echo "Detected line coverage: ${LINE_COVERAGE_RAW}% (required ${COVERAGE_THRESHOLD}%)"
+
+            if [ -z "$LINE_COVERAGE_INT" ] || [ "$LINE_COVERAGE_INT" -lt "$COVERAGE_THRESHOLD" ]; then
+              echo "Coverage threshold not met -> FAIL"
+              FAIL=1
+            fi
+          else
+            echo "Coverage summary missing -> FAIL"
+            FAIL=1
+          fi
+
+          echo "Stryker exit code: ${STRYKER_EXIT_CODE:-unknown}"
+          if [ "${STRYKER_EXIT_CODE:-1}" -ne 0 ]; then
+            echo "Stryker failed or thresholds not met -> FAIL"
+            FAIL=1
+          fi
+
+          if [ ! -f "StrykerOutput/mutation-report.html" ] && [ -z "$(find StrykerOutput -type f 2>/dev/null)" ]; then
+            echo "Stryker report missing -> FAIL"
+            FAIL=1
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "One or more thresholds failed."
+            exit 1
+          fi
+
+          echo "All thresholds passed."

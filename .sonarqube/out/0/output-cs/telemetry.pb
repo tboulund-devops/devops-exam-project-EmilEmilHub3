@@ -1,0 +1,1 @@
+zRdC:\Users\claim\Source\Repos\devops-exam-project-EmilEmilHub3new\SimpleShop.Api\SimpleShop.Api.csproj¢net8.0òCSharp12
