@@ -27,7 +27,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__DefaultConnection: "server=mysql;port=3306;database=simpleshop;user=app;password=app"
     ports:
-      - "80:8080"
+      - "81:8080"
 
 volumes:
   mysql_production_data:
