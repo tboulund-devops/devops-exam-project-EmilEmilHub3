@@ -27,7 +27,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Staging
       ConnectionStrings__DefaultConnection: "server=mysql;port=3306;database=simpleshop;user=app;password=app"
     ports:
-      - "8000:8080"
+      - "8001:8080"
 
 volumes:
   mysql_staging_data:
