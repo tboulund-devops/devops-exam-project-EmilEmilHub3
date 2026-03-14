@@ -1,4 +1,3 @@
-```yaml
 name: Delivery Pipeline
 
 on:
@@ -118,4 +117,3 @@ jobs:
             cd simpleshop
             docker compose -f docker-compose.production.yml pull
             docker compose -f docker-compose.production.yml up -d
-```
