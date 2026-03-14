@@ -19,9 +19,10 @@ public class ProductRepository : IProductRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var normalizedSearch = search.Trim().ToLower();
+            var normalizedSearch = search.Trim();
 
-            query = query.Where(p => p.Name.ToLower().Contains(normalizedSearch));
+            query = query.Where(p =>
+                EF.Functions.Like(p.Name, $"%{normalizedSearch}%"));
         }
 
         return query.OrderBy(p => p.Id).ToListAsync();
