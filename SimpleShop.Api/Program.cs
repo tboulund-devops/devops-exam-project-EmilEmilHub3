@@ -9,7 +9,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var cs = builder.Configuration.GetConnectionString("DefaultConnection");
+var cs = builder.Configuration.GetConnectionString("DefaultConnection")
+         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(cs, ServerVersion.AutoDetect(cs)));
