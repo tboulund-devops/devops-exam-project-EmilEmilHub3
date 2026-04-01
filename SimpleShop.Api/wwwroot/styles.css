@@ -1,0 +1,94 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    margin: 0;
+    padding: 24px;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.subtitle {
+    margin-top: -8px;
+    color: #555;
+}
+
+.card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+form,
+.row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+input,
+button {
+    padding: 10px;
+    font-size: 16px;
+}
+
+button {
+    cursor: pointer;
+}
+
+#status-message {
+    min-height: 24px;
+    font-weight: bold;
+}
+
+.success {
+    color: #0a7a25;
+}
+
+.error {
+    color: #b00020;
+}
+
+.table-actions {
+    display: flex;
+    gap: 8px;
+}
+
+    .table-actions button {
+        padding: 6px 10px;
+    }
+
+.table-row-name {
+    font-weight: 600;
+}
+
+@media (min-width: 700px) {
+    form {
+        max-width: 400px;
+    }
+
+    .row {
+        flex-direction: row;
+        align-items: center;
+    }
+
+        .row input {
+            flex: 1;
+        }
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}

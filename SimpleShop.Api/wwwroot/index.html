@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SimpleShop UI</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <main class="container">
+        <h1>SimpleShop</h1>
+        <p class="subtitle">Very basic UI for TestCafe and demo purposes</p>
+
+        <section class="card">
+            <h2>Create product</h2>
+            <form id="create-product-form">
+                <label for="product-name">Name</label>
+                <input id="product-name" data-testid="product-name-input" type="text" required />
+
+                <label for="product-price">Price</label>
+                <input id="product-price" data-testid="product-price-input" type="number" min="0" step="0.01" required />
+
+                <button id="create-product-button" data-testid="create-product-button" type="submit">
+                    Create product
+                </button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Search products</h2>
+            <div class="row">
+                <input id="search-input" data-testid="search-input" type="text" placeholder="Search by name" />
+                <button id="search-button" data-testid="search-button" type="button">Search</button>
+                <button id="load-all-button" data-testid="load-all-button" type="button">Load all</button>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Products</h2>
+            <p id="status-message" data-testid="status-message"></p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Name</th>
+                        <th>Price</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="products-table-body" data-testid="products-table-body"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="/app.js"></script>
+</body>
+</html>
