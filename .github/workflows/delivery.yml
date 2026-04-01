@@ -110,12 +110,18 @@ jobs:
 
       - name: Wait for staging to become ready
         run: |
-          for i in {1..30}; do
+          echo "Checking $STAGING_BASE_URL/api/products"
+
+          sleep 20
+
+          for i in {1..60}; do
             if curl -fsS "$STAGING_BASE_URL/api/products" > /dev/null; then
               echo "Staging is ready"
               exit 0
             fi
-            sleep 10
+
+            echo "Attempt $i failed, waiting 5 seconds..."
+            sleep 5
           done
 
           echo "Staging did not become ready in time"
@@ -152,12 +158,18 @@ jobs:
 
       - name: Wait for staging to become ready
         run: |
-          for i in {1..30}; do
+          echo "Checking $STAGING_BASE_URL/api/products"
+
+          sleep 20
+
+          for i in {1..60}; do
             if curl -fsS "$STAGING_BASE_URL/api/products" > /dev/null; then
               echo "Staging is ready"
               exit 0
             fi
-            sleep 10
+
+            echo "Attempt $i failed, waiting 5 seconds..."
+            sleep 5
           done
 
           echo "Staging did not become ready in time"
