@@ -12,8 +12,6 @@ permissions:
 jobs:
   delivery:
     runs-on: ubuntu-latest
-    outputs:
-      staging_url: ${{ steps.staging_url.outputs.url }}
 
     steps:
       - name: Checkout code
@@ -24,10 +22,6 @@ jobs:
       - name: Set image name
         id: repo
         run: echo "image_name=ghcr.io/tboulund-devops/devops-exam-project-emilemilhub3" >> $GITHUB_OUTPUT
-
-      - name: Set staging URL
-        id: staging_url
-        run: echo "url=${{ vars.STAGING_BASE_URL }}" >> $GITHUB_OUTPUT
 
       - name: Calculate semantic version
         id: semver
@@ -93,6 +87,8 @@ jobs:
     name: Run E2E tests against staging
     runs-on: ubuntu-latest
     needs: delivery
+    env:
+      STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
 
     steps:
       - name: Checkout code
@@ -109,10 +105,13 @@ jobs:
       - name: Install npm packages
         run: npm install
 
+      - name: Print staging URL
+        run: echo "STAGING_BASE_URL=$STAGING_BASE_URL"
+
       - name: Wait for staging to become ready
         run: |
           for i in {1..30}; do
-            if curl -fsS "${{ needs.delivery.outputs.staging_url }}/api/products" > /dev/null; then
+            if curl -fsS "$STAGING_BASE_URL/api/products" > /dev/null; then
               echo "Staging is ready"
               exit 0
             fi
@@ -125,13 +124,15 @@ jobs:
       - name: Run TestCafe E2E on staging
         env:
           CHROME_BIN: /usr/bin/google-chrome
-          BASE_URL: ${{ needs.delivery.outputs.staging_url }}
+          BASE_URL: ${{ vars.STAGING_BASE_URL }}
         run: npx testcafe chrome:headless tests/e2e/*.js
 
   performance-staging:
     name: Run K6 performance test against staging
     runs-on: ubuntu-latest
     needs: delivery
+    env:
+      STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
 
     steps:
       - name: Checkout code
@@ -146,10 +147,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y k6
 
+      - name: Print staging URL
+        run: echo "STAGING_BASE_URL=$STAGING_BASE_URL"
+
       - name: Wait for staging to become ready
         run: |
           for i in {1..30}; do
-            if curl -fsS "${{ needs.delivery.outputs.staging_url }}/api/products" > /dev/null; then
+            if curl -fsS "$STAGING_BASE_URL/api/products" > /dev/null; then
               echo "Staging is ready"
               exit 0
             fi
@@ -161,7 +165,7 @@ jobs:
 
       - name: Run K6 on staging
         env:
-          BASE_URL: ${{ needs.delivery.outputs.staging_url }}
+          BASE_URL: ${{ vars.STAGING_BASE_URL }}
         run: k6 run tests/performance/products-smoke.js
 
   deployment:
