@@ -152,7 +152,7 @@ public class ProductRepositoryTests
         // Act
         var updated = await repo.UpdateAsync(tracked);
 
-        // Assert
+        // Assertt
         Assert.Equal(1, updated.Id);
         Assert.Equal("Milk 2", updated.Name);
         Assert.Equal(20m, updated.Price);
