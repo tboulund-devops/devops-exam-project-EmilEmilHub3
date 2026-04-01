@@ -1,0 +1,10 @@
+{
+    "name": "simpleshop-tests",
+    "private": true,
+    "scripts": {
+        "test:e2e": "testcafe chrome:headless tests/e2e/*.js"
+    },
+    "devDependencies": {
+        "testcafe": "^3.7.0"
+    }
+}
