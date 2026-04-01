@@ -21,9 +21,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set lowercase image name
+      - name: Set image name
         id: repo
-        run: echo "image_name=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+        run: echo "image_name=ghcr.io/tboulund-devops/devops-exam-project-emilemilhub3" >> $GITHUB_OUTPUT
 
       - name: Set staging URL
         id: staging_url
