@@ -1,6 +1,6 @@
 namespace SimpleShop.Api.Models;
 
-public class CartResponseDto
+public class CartResponseDTO
 {
     public int UserId { get; set; }
     public List<CartItemResponseDto> Items { get; set; } = new();
