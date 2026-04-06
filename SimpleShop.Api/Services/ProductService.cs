@@ -25,7 +25,7 @@ public class ProductService
         return _repo.GetByIdAsync(id);
     }
 
-    public Task<Product> CreateAsync(CreateProductDto dto)
+    public Task<Product> CreateAsync(CreateProductDTO dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name))
             throw new ArgumentException("Name is required.", nameof(dto));
@@ -42,7 +42,7 @@ public class ProductService
         return _repo.AddAsync(product);
     }
 
-    public async Task<Product?> UpdateAsync(int id, CreateProductDto dto)
+    public async Task<Product?> UpdateAsync(int id, CreateProductDTO dto)
     {
         if (id <= 0)
             throw new ArgumentException("Id must be greater than 0.", nameof(id));

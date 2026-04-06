@@ -16,7 +16,7 @@ public class CartController : ControllerBase
     }
 
     [HttpPost("items")]
-    public async Task<ActionResult<CartItemResponseDto>> AddItem([FromBody] AddCartItemDto dto)
+    public async Task<ActionResult<CartItemResponseDTO>> AddItem([FromBody] AddCartItemDto dto)
     {
         try
         {
@@ -30,7 +30,7 @@ public class CartController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<CartResponseDto>> GetCart([FromQuery] int userId)
+    public async Task<ActionResult<CartResponseDTO>> GetCart([FromQuery] int userId)
     {
         try
         {

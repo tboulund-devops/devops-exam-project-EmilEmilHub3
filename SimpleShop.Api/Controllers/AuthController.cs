@@ -16,7 +16,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    public async Task<ActionResult<object>> Register([FromBody] RegisterUserDto dto)
+    public async Task<ActionResult<object>> Register([FromBody] RegisterUserDTO dto)
     {
         try
         {
@@ -35,7 +35,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<ActionResult<object>> Login([FromBody] LoginDto dto)
+    public async Task<ActionResult<object>> Login([FromBody] LoginDTO dto)
     {
         try
         {

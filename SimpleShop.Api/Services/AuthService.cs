@@ -14,7 +14,7 @@ public class AuthService
         _userRepository = userRepository;
     }
 
-    public async Task<User> RegisterAsync(RegisterUserDto dto)
+    public async Task<User> RegisterAsync(RegisterUserDTO dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Username))
             throw new ArgumentException("Username is required.", nameof(dto));
@@ -41,7 +41,7 @@ public class AuthService
         return await _userRepository.AddAsync(user);
     }
 
-    public async Task<User?> LoginAsync(LoginDto dto)
+    public async Task<User?> LoginAsync(LoginDTO dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Email))
             throw new ArgumentException("Email is required.", nameof(dto));

@@ -70,7 +70,7 @@ public class CartService
 
         var cartItems = await _cartRepository.GetByUserIdAsync(userId);
 
-        var items = cartItems.Select(item => new CartItemResponseDto
+        var items = cartItems.Select(item => new CartItemResponseDTO
         {
             Id = item.Id,
             ProductId = item.ProductId,
