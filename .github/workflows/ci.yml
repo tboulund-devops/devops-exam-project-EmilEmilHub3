@@ -16,23 +16,6 @@ jobs:
       COVERAGE_THRESHOLD: "70"
       MUTATION_HIGH: "80"
       MUTATION_LOW: "50"
-      ConnectionStrings__DefaultConnection: server=127.0.0.1;port=3306;database=simpleshop;user=app;password=app
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: simpleshop
-          MYSQL_USER: app
-          MYSQL_PASSWORD: app
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
 
     steps:
       - name: Checkout code
@@ -60,12 +43,12 @@ jobs:
         continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }} #new url
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
           SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
         run: |
           set +e
 
-          SONAR_HOST_URL="${SONAR_HOST_URL:-http://sonarqube.setgo.dk:9000}"
+          SONAR_HOST_URL="${SONAR_HOST_URL:-http://62.164.217.208:9000}"
           SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-SimpleShop}"
 
           dotnet sonarscanner begin \
