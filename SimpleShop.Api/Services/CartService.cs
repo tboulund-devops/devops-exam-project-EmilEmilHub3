@@ -21,28 +21,32 @@ public class CartService
 
     public async Task<CartItemResponseDto> AddItemAsync(AddCartItemDto dto)
     {
-        if (dto.UserId <= 0)
+        if (!dto.UserId.HasValue || dto.UserId.Value <= 0)
             throw new ArgumentException("UserId must be greater than 0.", nameof(dto));
 
-        if (dto.ProductId <= 0)
+        if (!dto.ProductId.HasValue || dto.ProductId.Value <= 0)
             throw new ArgumentException("ProductId must be greater than 0.", nameof(dto));
 
-        if (dto.Quantity <= 0)
+        if (!dto.Quantity.HasValue || dto.Quantity.Value <= 0)
             throw new ArgumentException("Quantity must be greater than 0.", nameof(dto));
 
-        var user = await _userRepository.GetByIdAsync(dto.UserId);
+        var userId = dto.UserId.Value;
+        var productId = dto.ProductId.Value;
+        var quantity = dto.Quantity.Value;
+
+        var user = await _userRepository.GetByIdAsync(userId);
         if (user is null)
             throw new ArgumentException("User was not found.", nameof(dto));
 
-        var product = await _productRepository.GetByIdAsync(dto.ProductId);
+        var product = await _productRepository.GetByIdAsync(productId);
         if (product is null)
             throw new ArgumentException("Product was not found.", nameof(dto));
 
         var cartItem = new CartItem
         {
-            UserId = dto.UserId,
-            ProductId = dto.ProductId,
-            Quantity = dto.Quantity
+            UserId = userId,
+            ProductId = productId,
+            Quantity = quantity
         };
 
         var created = await _cartRepository.AddAsync(cartItem);
