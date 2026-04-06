@@ -19,7 +19,7 @@ public class CartService
         _productRepository = productRepository;
     }
 
-    public async Task<CartItemResponseDTO> AddItemAsync(AddCartItemDTO dto)
+    public async Task<CartItemResponseDto> AddItemAsync(AddCartItemDto dto)
     {
         if (dto.UserId <= 0)
             throw new ArgumentException("UserId must be greater than 0.", nameof(dto));
@@ -48,18 +48,17 @@ public class CartService
         var created = await _cartRepository.AddAsync(cartItem);
         var createdProduct = created.Product ?? product;
 
-        return new CartItemResponseDTO
+        return new CartItemResponseDto
         {
             Id = created.Id,
             ProductId = createdProduct.Id,
             ProductName = createdProduct.Name,
-            ProductPrice = createdProduct.Price,
-            Quantity = created.Quantity,
-            LineTotal = createdProduct.Price * created.Quantity
+            Price = createdProduct.Price,
+            Quantity = created.Quantity
         };
     }
 
-    public async Task<CartResponseDTO> GetCartAsync(int userId)
+    public async Task<CartResponseDto> GetCartAsync(int userId)
     {
         if (userId <= 0)
             throw new ArgumentException("UserId must be greater than 0.", nameof(userId));
@@ -70,21 +69,20 @@ public class CartService
 
         var cartItems = await _cartRepository.GetByUserIdAsync(userId);
 
-        var items = cartItems.Select(item => new CartItemResponseDTO
+        var items = cartItems.Select(item => new CartItemResponseDto
         {
             Id = item.Id,
             ProductId = item.ProductId,
             ProductName = item.Product?.Name ?? string.Empty,
-            ProductPrice = item.Product?.Price ?? 0,
-            Quantity = item.Quantity,
-            LineTotal = (item.Product?.Price ?? 0) * item.Quantity
+            Price = item.Product?.Price ?? 0,
+            Quantity = item.Quantity
         }).ToList();
 
-        return new CartResponseDTO
+        return new CartResponseDto
         {
             UserId = userId,
             Items = items,
-            Total = items.Sum(i => i.LineTotal)
+            TotalPrice = items.Sum(i => i.Price * i.Quantity)
         };
     }
 }

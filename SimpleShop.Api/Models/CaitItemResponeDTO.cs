@@ -1,6 +1,6 @@
 namespace SimpleShop.Api.Models;
 
-public class CartItemResponseDTO
+public class CartItemResponseDto
 {
     public int Id { get; set; }
     public int ProductId { get; set; }
