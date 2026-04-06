@@ -19,7 +19,7 @@ public class CartService
         _productRepository = productRepository;
     }
 
-    public async Task<CartItemResponseDto> AddItemAsync(AddCartItemDto dto)
+    public async Task<CartItemResponseDTO> AddItemAsync(AddCartItemDTO dto)
     {
         if (dto.UserId <= 0)
             throw new ArgumentException("UserId must be greater than 0.", nameof(dto));
@@ -48,7 +48,7 @@ public class CartService
         var created = await _cartRepository.AddAsync(cartItem);
         var createdProduct = created.Product ?? product;
 
-        return new CartItemResponseDto
+        return new CartItemResponseDTO
         {
             Id = created.Id,
             ProductId = createdProduct.Id,
@@ -59,7 +59,7 @@ public class CartService
         };
     }
 
-    public async Task<CartResponseDto> GetCartAsync(int userId)
+    public async Task<CartResponseDTO> GetCartAsync(int userId)
     {
         if (userId <= 0)
             throw new ArgumentException("UserId must be greater than 0.", nameof(userId));
@@ -80,7 +80,7 @@ public class CartService
             LineTotal = (item.Product?.Price ?? 0) * item.Quantity
         }).ToList();
 
-        return new CartResponseDto
+        return new CartResponseDTO
         {
             UserId = userId,
             Items = items,
