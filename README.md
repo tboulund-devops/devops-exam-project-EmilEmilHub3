@@ -28,6 +28,31 @@ The goal is to have a realistic but simple application that is easy to extend ea
 
 
 
+## Implementation Status
+
+> [!NOTE]
+> This section is automatically updated to reflect which features have been implemented in the codebase.
+
+| Endpoint | Description | Status |
+|---|---|---|
+| `GET /api/products` | List all products | ✅ Implemented |
+| `GET /api/products?search=...` | Search products by name | ✅ Implemented |
+| `GET /api/products/{id}` | Get product by ID | ✅ Implemented |
+| `POST /api/products` | Create a product | ✅ Implemented |
+| `PUT /api/products/{id}` | Update a product | ✅ Implemented |
+| `DELETE /api/products/{id}` | Delete a product | ✅ Implemented |
+| `POST /api/auth/register` | Register a new user | ✅ Implemented |
+| `POST /api/auth/login` | Login and receive session info | ✅ Implemented |
+| `POST /api/cart/items` | Add item to cart | ✅ Implemented |
+| `GET /api/cart` | View cart (by userId query param) | ✅ Implemented |
+| `PUT /api/cart/items/{id}` | Update cart item quantity | 🔲 Planned (Week 12) |
+| `DELETE /api/cart/items/{id}` | Remove item from cart | 🔲 Planned (Week 12) |
+| `POST /api/orders` | Create order from cart | 🔲 Planned (Week 13) |
+| `GET /api/orders` | List user orders | 🔲 Planned (Week 15) |
+| `GET /api/orders/{id}` | Get order details | 🔲 Planned (Week 15) |
+| `POST /api/orders/{id}/cancel` | Cancel an order | 🔲 Planned (Week 16) |
+
+
 ## Feature plan
 
 > [!NOTE]
@@ -39,32 +64,32 @@ The goal is to have a realistic but simple application that is easy to extend ea
 *Kick-off week - no features to be planned here*
 
 ### Week 6
-**Feature 1:** Add `Product` model + `GET /api/products` (list all products)
+**Feature 1:** ✅ Add `Product` model + `GET /api/products` (list all products)
 
-**Feature 2:** Add `POST /api/products` (create a product)
+**Feature 2:** ✅ Add `POST /api/products` (create a product)
 
 ### Week 7
 *Winter vacation - nothing planned.*
 
 ### Week 8
-**Feature 1:** Add `GET /api/products/{id}` (get product by id)  
+**Feature 1:** ✅ Add `GET /api/products/{id}` (get product by id)  
 
-**Feature 2:** Add `PUT /api/products/{id}` (update a product)
+**Feature 2:** ✅ Add `PUT /api/products/{id}` (update a product)
 
 ### Week 9
-**Feature 1:** Add `DELETE /api/products/{id}` (delete a product)  
+**Feature 1:** ✅ Add `DELETE /api/products/{id}` (delete a product)  
 
-**Feature 2:** Add product search: `GET /api/products?search=...`
+**Feature 2:** ✅ Add product search: `GET /api/products?search=...`
 
 ### Week 10
-**Feature 1:** Add `User` model + `POST /api/auth/register`
+**Feature 1:** ✅ Add `User` model + `POST /api/auth/register`
 
-**Feature 2:** Add `POST /api/auth/login`
+**Feature 2:** ✅ Add `POST /api/auth/login`
 
 ### Week 11
-**Feature 1:** Add `CartItem` model + `POST /api/cart/items` (add item to cart)
+**Feature 1:** ✅ Add `CartItem` model + `POST /api/cart/items` (add item to cart)
 
-**Feature 2:** Add `GET /api/cart` (view cart)
+**Feature 2:** ✅ Add `GET /api/cart` (view cart)
 
 ### Week 12
 **Feature 1:** Add Update cart item quantity: `PUT /api/cart/items/{id}`
