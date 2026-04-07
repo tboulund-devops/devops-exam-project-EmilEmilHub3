@@ -2,7 +2,7 @@
 name: Daily Documentation Updater
 description: Reviews recent code changes and updates the README so project documentation stays aligned with the actual repository state.
 on:
-  schedule: daily
+  
   workflow_dispatch:
 permissions:
   contents: read

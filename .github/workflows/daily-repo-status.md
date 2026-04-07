@@ -2,7 +2,7 @@
 name: Daily Repo Status
 description: Creates a daily GitHub issue with a short status report about recent repository activity.
 on:
-  schedule: daily
+  
   workflow_dispatch:
 permissions:
   contents: read

@@ -2,7 +2,7 @@
 name: Code Simplifier
 description: Reviews recently changed .NET code and creates a PR with safe simplifications that improve clarity without changing behavior.
 on:
-  schedule: daily
+  
   workflow_dispatch:
 permissions:
   contents: read
