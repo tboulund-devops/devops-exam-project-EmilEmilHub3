@@ -31,4 +31,26 @@ public class CartRepository : ICartRepository
             .OrderBy(c => c.Id)
             .ToListAsync();
     }
+
+    public Task<CartItem?> GetByIdAsync(int id)
+    {
+        return _db.CartItems
+            .Include(c => c.Product)
+            .FirstOrDefaultAsync(c => c.Id == id);
+    }
+
+    public async Task<CartItem> UpdateAsync(CartItem cartItem)
+    {
+        _db.CartItems.Update(cartItem);
+        await _db.SaveChangesAsync();
+
+        await _db.Entry(cartItem).Reference(c => c.Product).LoadAsync();
+        return cartItem;
+    }
+
+    public async Task DeleteAsync(CartItem cartItem)
+    {
+        _db.CartItems.Remove(cartItem);
+        await _db.SaveChangesAsync();
+    }
 }

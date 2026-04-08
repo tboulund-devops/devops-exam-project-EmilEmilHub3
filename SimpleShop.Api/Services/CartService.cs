@@ -89,4 +89,42 @@ public class CartService
             TotalPrice = items.Sum(i => i.Price * i.Quantity)
         };
     }
+
+    public async Task<CartItemResponseDto> UpdateItemQuantityAsync(int id, UpdateCartItemQuantityDto dto)
+    {
+        if (id <= 0)
+            throw new ArgumentException("Cart item id must be greater than 0.", nameof(id));
+
+        if (!dto.Quantity.HasValue || dto.Quantity.Value <= 0)
+            throw new ArgumentException("Quantity must be greater than 0.", nameof(dto));
+
+        var cartItem = await _cartRepository.GetByIdAsync(id);
+        if (cartItem is null)
+            throw new KeyNotFoundException("Cart item was not found.");
+
+        cartItem.Quantity = dto.Quantity.Value;
+
+        var updated = await _cartRepository.UpdateAsync(cartItem);
+
+        return new CartItemResponseDto
+        {
+            Id = updated.Id,
+            ProductId = updated.ProductId,
+            ProductName = updated.Product?.Name ?? string.Empty,
+            Price = updated.Product?.Price ?? 0,
+            Quantity = updated.Quantity
+        };
+    }
+
+    public async Task RemoveItemAsync(int id)
+    {
+        if (id <= 0)
+            throw new ArgumentException("Cart item id must be greater than 0.", nameof(id));
+
+        var cartItem = await _cartRepository.GetByIdAsync(id);
+        if (cartItem is null)
+            throw new KeyNotFoundException("Cart item was not found.");
+
+        await _cartRepository.DeleteAsync(cartItem);
+    }
 }

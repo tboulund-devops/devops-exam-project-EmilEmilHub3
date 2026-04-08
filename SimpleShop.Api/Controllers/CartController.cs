@@ -41,4 +41,40 @@ public class CartController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    [HttpPut("items/{id}")]
+    public async Task<ActionResult<CartItemResponseDto>> UpdateItemQuantity(int id, [FromBody] UpdateCartItemQuantityDto dto)
+    {
+        try
+        {
+            var updated = await _service.UpdateItemQuantityAsync(id, dto);
+            return Ok(updated);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpDelete("items/{id}")]
+    public async Task<IActionResult> RemoveItem(int id)
+    {
+        try
+        {
+            await _service.RemoveItemAsync(id);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }
