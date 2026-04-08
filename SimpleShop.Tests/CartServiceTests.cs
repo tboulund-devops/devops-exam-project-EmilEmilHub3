@@ -254,4 +254,165 @@ public class CartServiceTests
         Assert.Equal("Milk", result.Items[0].ProductName);
         Assert.Equal("Bread", result.Items[1].ProductName);
     }
+
+    [Fact]
+    public async Task UpdateItemQuantityAsync_WhenIdInvalid_ThrowsArgumentException()
+    {
+        var cartRepo = new Mock<ICartRepository>();
+        var userRepo = new Mock<IUserRepository>();
+        var productRepo = new Mock<IProductRepository>();
+
+        var service = new CartService(cartRepo.Object, userRepo.Object, productRepo.Object);
+
+        var dto = new UpdateCartItemQuantityDto
+        {
+            Quantity = 3
+        };
+
+        var act = async () => await service.UpdateItemQuantityAsync(0, dto);
+
+        await Assert.ThrowsAsync<ArgumentException>(act);
+        cartRepo.Verify(r => r.GetByIdAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateItemQuantityAsync_WhenQuantityInvalid_ThrowsArgumentException()
+    {
+        var cartRepo = new Mock<ICartRepository>();
+        var userRepo = new Mock<IUserRepository>();
+        var productRepo = new Mock<IProductRepository>();
+
+        var service = new CartService(cartRepo.Object, userRepo.Object, productRepo.Object);
+
+        var dto = new UpdateCartItemQuantityDto
+        {
+            Quantity = 0
+        };
+
+        var act = async () => await service.UpdateItemQuantityAsync(1, dto);
+
+        await Assert.ThrowsAsync<ArgumentException>(act);
+        cartRepo.Verify(r => r.GetByIdAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateItemQuantityAsync_WhenCartItemNotFound_ThrowsKeyNotFoundException()
+    {
+        var cartRepo = new Mock<ICartRepository>();
+        var userRepo = new Mock<IUserRepository>();
+        var productRepo = new Mock<IProductRepository>();
+
+        cartRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((CartItem?)null);
+
+        var service = new CartService(cartRepo.Object, userRepo.Object, productRepo.Object);
+
+        var dto = new UpdateCartItemQuantityDto
+        {
+            Quantity = 5
+        };
+
+        var act = async () => await service.UpdateItemQuantityAsync(1, dto);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(act);
+        cartRepo.Verify(r => r.UpdateAsync(It.IsAny<CartItem>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateItemQuantityAsync_WhenValid_ReturnsUpdatedCartItemResponse()
+    {
+        var cartRepo = new Mock<ICartRepository>();
+        var userRepo = new Mock<IUserRepository>();
+        var productRepo = new Mock<IProductRepository>();
+
+        var existingItem = new CartItem
+        {
+            Id = 1,
+            UserId = 1,
+            ProductId = 2,
+            Quantity = 1,
+            Product = new Product
+            {
+                Id = 2,
+                Name = "Milk",
+                Price = 15m
+            }
+        };
+
+        cartRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existingItem);
+        cartRepo.Setup(r => r.UpdateAsync(It.IsAny<CartItem>()))
+            .ReturnsAsync((CartItem item) => item);
+
+        var service = new CartService(cartRepo.Object, userRepo.Object, productRepo.Object);
+
+        var dto = new UpdateCartItemQuantityDto
+        {
+            Quantity = 4
+        };
+
+        var result = await service.UpdateItemQuantityAsync(1, dto);
+
+        Assert.Equal(1, result.Id);
+        Assert.Equal(2, result.ProductId);
+        Assert.Equal("Milk", result.ProductName);
+        Assert.Equal(15m, result.Price);
+        Assert.Equal(4, result.Quantity);
+
+        cartRepo.Verify(r => r.UpdateAsync(It.Is<CartItem>(c => c.Id == 1 && c.Quantity == 4)), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemoveItemAsync_WhenIdInvalid_ThrowsArgumentException()
+    {
+        var cartRepo = new Mock<ICartRepository>();
+        var userRepo = new Mock<IUserRepository>();
+        var productRepo = new Mock<IProductRepository>();
+
+        var service = new CartService(cartRepo.Object, userRepo.Object, productRepo.Object);
+
+        var act = async () => await service.RemoveItemAsync(0);
+
+        await Assert.ThrowsAsync<ArgumentException>(act);
+        cartRepo.Verify(r => r.GetByIdAsync(It.IsAny<int>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RemoveItemAsync_WhenCartItemNotFound_ThrowsKeyNotFoundException()
+    {
+        var cartRepo = new Mock<ICartRepository>();
+        var userRepo = new Mock<IUserRepository>();
+        var productRepo = new Mock<IProductRepository>();
+
+        cartRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync((CartItem?)null);
+
+        var service = new CartService(cartRepo.Object, userRepo.Object, productRepo.Object);
+
+        var act = async () => await service.RemoveItemAsync(1);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(act);
+        cartRepo.Verify(r => r.DeleteAsync(It.IsAny<CartItem>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RemoveItemAsync_WhenValid_DeletesCartItem()
+    {
+        var cartRepo = new Mock<ICartRepository>();
+        var userRepo = new Mock<IUserRepository>();
+        var productRepo = new Mock<IProductRepository>();
+
+        var existingItem = new CartItem
+        {
+            Id = 1,
+            UserId = 1,
+            ProductId = 2,
+            Quantity = 3
+        };
+
+        cartRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(existingItem);
+
+        var service = new CartService(cartRepo.Object, userRepo.Object, productRepo.Object);
+
+        await service.RemoveItemAsync(1);
+
+        cartRepo.Verify(r => r.DeleteAsync(It.Is<CartItem>(c => c.Id == 1)), Times.Once);
+    }
 }
