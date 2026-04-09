@@ -23,6 +23,29 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore .NET dependencies
+        run: dotnet restore
+
+      - name: Create EF migration bundle
+        run: |
+          dotnet tool install --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+          mkdir -p artifacts
+
+          dotnet ef migrations bundle \
+            --project SimpleShop.Api/SimpleShop.Api.csproj \
+            --startup-project SimpleShop.Api/SimpleShop.Api.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained \
+            --output artifacts/efbundle
+
       - name: Set image name
         id: repo
         run: echo "image_name=ghcr.io/tboulund-devops/devops-exam-project-emilemilhub3" >> $GITHUB_OUTPUT
@@ -65,13 +88,13 @@ jobs:
           generateReleaseNotes: true
           allowUpdates: true
 
-      - name: Copy staging compose file
+      - name: Copy staging compose file and EF bundle
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
-          source: "docker-compose.staging.yml"
+          source: "docker-compose.staging.yml,artifacts/efbundle"
           target: "simpleshop"
 
       - name: Deploy to staging
@@ -81,11 +104,41 @@ jobs:
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
+            set -e
+
             mkdir -p ~/simpleshop
             cd ~/simpleshop
+
+            chmod +x efbundle
+
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
-            docker compose -f docker-compose.staging.yml --env-file .env pull
-            docker compose -f docker-compose.staging.yml --env-file .env up -d
+
+            docker compose -f docker-compose.staging.yml --env-file .env up -d mysql
+
+            for i in {1..30}; do
+              if docker compose -f docker-compose.staging.yml --env-file .env ps mysql | grep -q "healthy"; then
+                echo "MySQL is healthy"
+                break
+              fi
+
+              echo "Waiting for MySQL to become healthy..."
+              sleep 5
+            done
+
+            MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env | cut -d= -f2-)
+            MYSQL_USER=$(grep '^MYSQL_USER=' .env | cut -d= -f2-)
+            MYSQL_PASSWORD=$(grep '^MYSQL_PASSWORD=' .env | cut -d= -f2-)
+
+            docker run --rm \
+              --network simpleshop_default \
+              -v "$PWD:/work" \
+              -w /work \
+              mcr.microsoft.com/dotnet/runtime-deps:8.0 \
+              ./efbundle \
+              --connection "server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
+
+            docker compose -f docker-compose.staging.yml --env-file .env pull api
+            docker compose -f docker-compose.staging.yml --env-file .env up -d api
 
   e2e-staging:
     name: Run E2E tests against staging
@@ -202,13 +255,36 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
 
-      - name: Copy production compose file
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore .NET dependencies
+        run: dotnet restore
+
+      - name: Create EF migration bundle
+        run: |
+          dotnet tool install --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+          mkdir -p artifacts
+
+          dotnet ef migrations bundle \
+            --project SimpleShop.Api/SimpleShop.Api.csproj \
+            --startup-project SimpleShop.Api/SimpleShop.Api.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained \
+            --output artifacts/efbundle
+
+      - name: Copy production compose file and EF bundle
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          source: "docker-compose.production.yml"
+          source: "docker-compose.production.yml,artifacts/efbundle"
           target: "simpleshop"
 
       - name: Deploy to production
@@ -218,8 +294,38 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
+            set -e
+
             mkdir -p ~/simpleshop
             cd ~/simpleshop
+
+            chmod +x efbundle
+
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
-            docker compose -f docker-compose.production.yml --env-file .env pull
-            docker compose -f docker-compose.production.yml --env-file .env up -d
+
+            docker compose -f docker-compose.production.yml --env-file .env up -d mysql
+
+            for i in {1..30}; do
+              if docker compose -f docker-compose.production.yml --env-file .env ps mysql | grep -q "healthy"; then
+                echo "MySQL is healthy"
+                break
+              fi
+
+              echo "Waiting for MySQL to become healthy..."
+              sleep 5
+            done
+
+            MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env | cut -d= -f2-)
+            MYSQL_USER=$(grep '^MYSQL_USER=' .env | cut -d= -f2-)
+            MYSQL_PASSWORD=$(grep '^MYSQL_PASSWORD=' .env | cut -d= -f2-)
+
+            docker run --rm \
+              --network simpleshop_default \
+              -v "$PWD:/work" \
+              -w /work \
+              mcr.microsoft.com/dotnet/runtime-deps:8.0 \
+              ./efbundle \
+              --connection "server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
+
+            docker compose -f docker-compose.production.yml --env-file .env pull api
+            docker compose -f docker-compose.production.yml --env-file .env up -d api
