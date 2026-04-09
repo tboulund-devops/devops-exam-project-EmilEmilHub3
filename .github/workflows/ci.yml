@@ -58,7 +58,7 @@ jobs:
             /d:sonar.coverageReportPaths="CoverageReport/SonarQube.xml" \
             /d:sonar.qualitygate.wait=true \
             /d:sonar.qualitygate.timeout=300 \
-            /d:sonar.exclusions="CoverageReport/**,StrykerOutput/**" \
+            /d:sonar.exclusions="CoverageReport/**,StrykerOutput/**,**/Migrations/**" \
             /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/*DbContext*.cs"
 
           EXIT_CODE=$?
