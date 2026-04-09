@@ -8,4 +8,5 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
 
     public List<CartItem> CartItems { get; set; } = new();
+    public List<Order> Orders { get; set; } = new();
 }

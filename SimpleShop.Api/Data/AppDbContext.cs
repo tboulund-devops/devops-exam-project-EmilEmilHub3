@@ -10,6 +10,8 @@ public class AppDbContext : DbContext
     public DbSet<Product> Products => Set<Product>();
     public DbSet<User> Users => Set<User>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderLine> OrderLines => Set<OrderLine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +41,30 @@ public class AppDbContext : DbContext
             e.HasOne(c => c.Product)
                 .WithMany()
                 .HasForeignKey(c => c.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Order>(e =>
+        {
+            e.HasOne(o => o.User)
+                .WithMany(u => u.Orders)
+                .HasForeignKey(o => o.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OrderLine>(e =>
+        {
+            e.Property(ol => ol.Quantity).IsRequired();
+            e.Property(ol => ol.UnitPrice).HasPrecision(10, 2);
+
+            e.HasOne(ol => ol.Order)
+                .WithMany(o => o.OrderLines)
+                .HasForeignKey(ol => ol.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(ol => ol.Product)
+                .WithMany()
+                .HasForeignKey(ol => ol.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
