@@ -29,7 +29,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore .NET dependencies
-        run: dotnet restore
+        run: dotnet restore SimpleShop.Api/SimpleShop.Api.csproj -r linux-x64
 
       - name: Create EF migration bundle
         run: |
@@ -261,7 +261,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore .NET dependencies
-        run: dotnet restore
+        run: dotnet restore SimpleShop.Api/SimpleShop.Api.csproj -r linux-x64
 
       - name: Create EF migration bundle
         run: |
