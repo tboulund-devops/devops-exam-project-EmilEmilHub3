@@ -25,8 +25,8 @@ public class UserRepository : IUserRepository
         return _db.Users.FirstOrDefaultAsync(u => u.Email == email);
     }
 
-    public Task<User?> GetByIdAsync(int id)
+    public async Task<User?> GetByIdAsync(int id)
     {
-        return _db.Users.FindAsync(id).AsTask();
+        return await _db.Users.FindAsync(id);
     }
 }
