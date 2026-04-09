@@ -53,4 +53,17 @@ public class CartRepository : ICartRepository
         _db.CartItems.Remove(cartItem);
         await _db.SaveChangesAsync();
     }
+
+    public async Task ClearByUserIdAsync(int userId)
+    {
+        var cartItems = await _db.CartItems
+            .Where(c => c.UserId == userId)
+            .ToListAsync();
+
+        if (cartItems.Count == 0)
+            return;
+
+        _db.CartItems.RemoveRange(cartItems);
+        await _db.SaveChangesAsync();
+    }
 }

@@ -47,6 +47,8 @@ public class OrderService
 
         var created = await _orderRepository.AddAsync(order);
 
+        await _cartRepository.ClearByUserIdAsync(userId);
+
         return new OrderResponseDto
         {
             Id = created.Id,

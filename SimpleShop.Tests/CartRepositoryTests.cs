@@ -212,4 +212,35 @@ public class CartRepositoryTests
 
         Assert.False(await db.CartItems.AnyAsync(c => c.Id == 1));
     }
+
+    [Fact]
+    public async Task ClearByUserIdAsync_WhenUserHasItems_RemovesOnlyThatUsersCartItems()
+    {
+        await using var db = CreateDb();
+
+        db.Users.AddRange(
+            new User { Id = 1, Username = "Emil", Email = "emil@test.com", PasswordHash = "HASH" },
+            new User { Id = 2, Username = "Anna", Email = "anna@test.com", PasswordHash = "HASH" }
+        );
+
+        db.Products.AddRange(
+            new Product { Id = 10, Name = "Milk", Price = 10m },
+            new Product { Id = 20, Name = "Bread", Price = 20m }
+        );
+
+        db.CartItems.AddRange(
+            new CartItem { Id = 1, UserId = 1, ProductId = 10, Quantity = 2 },
+            new CartItem { Id = 2, UserId = 1, ProductId = 20, Quantity = 1 },
+            new CartItem { Id = 3, UserId = 2, ProductId = 10, Quantity = 4 }
+        );
+
+        await db.SaveChangesAsync();
+
+        var repo = new CartRepository(db);
+
+        await repo.ClearByUserIdAsync(1);
+
+        Assert.Empty(await db.CartItems.Where(c => c.UserId == 1).ToListAsync());
+        Assert.Single(await db.CartItems.Where(c => c.UserId == 2).ToListAsync());
+    }
 }

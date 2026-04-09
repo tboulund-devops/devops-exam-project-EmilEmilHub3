@@ -25,6 +25,7 @@ public class OrderServiceTests
 
         await Assert.ThrowsAsync<ArgumentException>(act);
         orderRepo.Verify(r => r.AddAsync(It.IsAny<Order>()), Times.Never);
+        cartRepo.Verify(r => r.ClearByUserIdAsync(It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -47,6 +48,7 @@ public class OrderServiceTests
 
         await Assert.ThrowsAsync<ArgumentException>(act);
         orderRepo.Verify(r => r.AddAsync(It.IsAny<Order>()), Times.Never);
+        cartRepo.Verify(r => r.ClearByUserIdAsync(It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -77,10 +79,11 @@ public class OrderServiceTests
 
         await Assert.ThrowsAsync<ArgumentException>(act);
         orderRepo.Verify(r => r.AddAsync(It.IsAny<Order>()), Times.Never);
+        cartRepo.Verify(r => r.ClearByUserIdAsync(It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
-    public async Task CreateOrderAsync_WhenValid_ReturnsCreatedOrderResponse()
+    public async Task CreateOrderAsync_WhenValid_ReturnsCreatedOrderResponse_AndClearsCart()
     {
         var orderRepo = new Mock<IOrderRepository>();
         var cartRepo = new Mock<ICartRepository>();
@@ -182,5 +185,6 @@ public class OrderServiceTests
         Assert.Equal(45m, result.TotalPrice);
 
         orderRepo.Verify(r => r.AddAsync(It.IsAny<Order>()), Times.Once);
+        cartRepo.Verify(r => r.ClearByUserIdAsync(1), Times.Once);
     }
 }
