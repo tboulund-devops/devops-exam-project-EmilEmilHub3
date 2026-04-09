@@ -126,10 +126,9 @@ jobs:
             done
 
             MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env | cut -d= -f2-)
-            MYSQL_USER=$(grep '^MYSQL_USER=' .env | cut -d= -f2-)
-            MYSQL_PASSWORD=$(grep '^MYSQL_PASSWORD=' .env | cut -d= -f2-)
+            MYSQL_ROOT_PASSWORD=$(grep '^MYSQL_ROOT_PASSWORD=' .env | cut -d= -f2-)
 
-            CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
+            CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=root;password=${MYSQL_ROOT_PASSWORD}"
 
             docker run --rm \
               --network simpleshop_default \
@@ -319,10 +318,9 @@ jobs:
             done
 
             MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env | cut -d= -f2-)
-            MYSQL_USER=$(grep '^MYSQL_USER=' .env | cut -d= -f2-)
-            MYSQL_PASSWORD=$(grep '^MYSQL_PASSWORD=' .env | cut -d= -f2-)
+            MYSQL_ROOT_PASSWORD=$(grep '^MYSQL_ROOT_PASSWORD=' .env | cut -d= -f2-)
 
-            CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
+            CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=root;password=${MYSQL_ROOT_PASSWORD}"
 
             docker run --rm \
               --network simpleshop_default \
