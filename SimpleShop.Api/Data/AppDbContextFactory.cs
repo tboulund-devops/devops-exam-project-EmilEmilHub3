@@ -18,7 +18,9 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
             }
         }
 
-        connectionString ??= "server=localhost;port=3307;database=simpleshop;user=app;password=app;";
+        // Fallback uden hardcoded password (kun til lokal dev)
+        connectionString ??= Environment.GetEnvironmentVariable("CONNECTION_STRING")
+            ?? throw new InvalidOperationException("Connection string not provided.");
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         optionsBuilder.UseMySql(
