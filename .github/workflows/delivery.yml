@@ -129,13 +129,16 @@ jobs:
             MYSQL_USER=$(grep '^MYSQL_USER=' .env | cut -d= -f2-)
             MYSQL_PASSWORD=$(grep '^MYSQL_PASSWORD=' .env | cut -d= -f2-)
 
+            CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
+
             docker run --rm \
               --network simpleshop_default \
+              -e CONNECTION_STRING="$CONNECTION_STRING" \
               -v "$PWD:/work" \
               -w /work \
               mcr.microsoft.com/dotnet/runtime-deps:8.0 \
               ./artifacts/efbundle \
-              --connection "server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
+              --connection "$CONNECTION_STRING"
 
             docker compose -f docker-compose.staging.yml --env-file .env pull api
             docker compose -f docker-compose.staging.yml --env-file .env up -d api
@@ -319,13 +322,16 @@ jobs:
             MYSQL_USER=$(grep '^MYSQL_USER=' .env | cut -d= -f2-)
             MYSQL_PASSWORD=$(grep '^MYSQL_PASSWORD=' .env | cut -d= -f2-)
 
+            CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
+
             docker run --rm \
               --network simpleshop_default \
+              -e CONNECTION_STRING="$CONNECTION_STRING" \
               -v "$PWD:/work" \
               -w /work \
               mcr.microsoft.com/dotnet/runtime-deps:8.0 \
               ./artifacts/efbundle \
-              --connection "server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
+              --connection "$CONNECTION_STRING"
 
             docker compose -f docker-compose.production.yml --env-file .env pull api
             docker compose -f docker-compose.production.yml --env-file .env up -d api
