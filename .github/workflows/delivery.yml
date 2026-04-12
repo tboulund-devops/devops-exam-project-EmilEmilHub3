@@ -241,7 +241,7 @@ jobs:
       - name: Run K6 on staging
         env:
           BASE_URL: ${{ vars.STAGING_BASE_URL }}
-        run: k6 run tests/performance/products-smoke.js
+        run: k6 run tests/performance/products-load.js
 
   deployment:
     name: Deploy to production
