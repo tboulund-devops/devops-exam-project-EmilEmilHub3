@@ -16,6 +16,15 @@ services:
       timeout: 5s
       retries: 10
 
+  featurehub:
+    image: featurehub/party-server:latest
+    container_name: simpleshop-featurehub-staging
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    volumes:
+      - featurehub_staging_data:/db
+
   api:
     image: ${IMAGE_NAME}:staging
     container_name: simpleshop-api-staging
@@ -23,12 +32,17 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      featurehub:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}
+      FeatureHub__EdgeUrl: ${FeatureHub__EdgeUrl}
+      FeatureHub__ApiKey: ${FeatureHub__ApiKey}
     ports:
       - "8001:8080"
 
 volumes:
   mysql_staging_data:
+  featurehub_staging_data:
