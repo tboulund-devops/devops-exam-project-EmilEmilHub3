@@ -15,6 +15,9 @@ public class FeatureStateProvider
         var apiKey = configuration["FeatureHub:ApiKey"]
                      ?? throw new InvalidOperationException("FeatureHub:ApiKey is missing.");
 
+        Console.WriteLine($"[FeatureHub] EdgeUrl: {edgeUrl}");
+        Console.WriteLine($"[FeatureHub] ApiKey prefix: {apiKey[..Math.Min(8, apiKey.Length)]}...");
+
         var config = new EdgeFeatureHubConfig(edgeUrl, apiKey);
 
         config.Init().Wait();
@@ -30,8 +33,10 @@ public class FeatureStateProvider
             .GetAwaiter()
             .GetResult();
 
-        var value = context[featureKey].Value;
+        var rawValue = context[featureKey].Value;
 
-        return value is bool enabled && enabled;
+        Console.WriteLine($"[FeatureHub] Feature '{featureKey}' raw value: {rawValue} (type: {rawValue?.GetType().Name ?? "null"})");
+
+        return rawValue is bool enabled && enabled;
     }
 }

@@ -34,8 +34,8 @@ async function loadFeatureToggles() {
         featureState.productSearch = await isFeatureEnabled('ProductSearch');
         featureState.productDelete = await isFeatureEnabled('ProductDelete');
 
-        if (!featureState.productSearch && searchSection) {
-            searchSection.style.display = 'none';
+        if (searchSection) {
+            searchSection.style.display = featureState.productSearch ? '' : 'none';
         }
     } catch (error) {
         setStatus('Could not load feature toggles.', true);
