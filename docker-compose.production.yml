@@ -1,7 +1,6 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: simpleshop-mysql-production
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -18,7 +17,6 @@ services:
 
   featurehub:
     image: featurehub/party-server:latest
-    container_name: simpleshop-featurehub-production
     restart: unless-stopped
     ports:
       - "8086:8085"
@@ -27,7 +25,6 @@ services:
 
   api:
     image: ${IMAGE_NAME}:latest
-    container_name: simpleshop-api-production
     restart: unless-stopped
     depends_on:
       mysql:
