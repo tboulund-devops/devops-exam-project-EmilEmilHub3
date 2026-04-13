@@ -3,16 +3,16 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: simpleshop
-      MYSQL_USER: app
-      MYSQL_PASSWORD: app
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -36,10 +36,10 @@ services:
       featurehub:
         condition: service_started
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: "server=mysql;port=3306;database=simpleshop;user=app;password=app"
-      FeatureHub__EdgeUrl: "http://featurehub:8085"
-      FeatureHub__ApiKey: "21dad089-fe08-4473-87ae-d53ad34100c9/LdZNGY3PlehXBIxIcJUzOQFNkBSs2KP0bR66WvQ4"
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ConnectionStrings__DefaultConnection: "server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
+      FeatureHub__EdgeUrl: ${FeatureHub__EdgeUrl}
+      FeatureHub__ApiKey: ${FeatureHub__ApiKey}
     ports:
       - "8080:8080"
 
