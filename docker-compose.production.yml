@@ -15,22 +15,12 @@ services:
       timeout: 5s
       retries: 10
 
-  featurehub:
-    image: featurehub/party-server:latest
-    restart: unless-stopped
-    ports:
-      - "8086:8085"
-    volumes:
-      - featurehub_production_data:/db
-
   api:
     image: ${IMAGE_NAME}:latest
     restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
-      featurehub:
-        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
@@ -42,4 +32,3 @@ services:
 
 volumes:
   mysql_production_data:
-  featurehub_production_data:
