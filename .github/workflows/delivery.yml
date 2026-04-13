@@ -113,10 +113,10 @@ jobs:
 
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
-            docker compose -f docker-compose.staging.yml --env-file .env up -d mysql
+            docker compose -f docker-compose.staging.yml --env-file .env.staging up -d mysql
 
             for i in {1..30}; do
-              if docker compose -f docker-compose.staging.yml --env-file .env ps mysql | grep -q "healthy"; then
+              if docker compose -f docker-compose.staging.yml --env-file .env.staging ps mysql | grep -q "healthy"; then
                 echo "MySQL is healthy"
                 break
               fi
@@ -125,8 +125,8 @@ jobs:
               sleep 5
             done
 
-            MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env | cut -d= -f2-)
-            MYSQL_ROOT_PASSWORD=$(grep '^MYSQL_ROOT_PASSWORD=' .env | cut -d= -f2-)
+            MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env.staging | cut -d= -f2-)
+            MYSQL_ROOT_PASSWORD=$(grep '^MYSQL_ROOT_PASSWORD=' .env.staging | cut -d= -f2-)
 
             CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=root;password=${MYSQL_ROOT_PASSWORD}"
 
@@ -139,8 +139,8 @@ jobs:
               ./artifacts/efbundle \
               --connection "$CONNECTION_STRING"
 
-            docker compose -f docker-compose.staging.yml --env-file .env pull api
-            docker compose -f docker-compose.staging.yml --env-file .env up -d api
+            docker compose -f docker-compose.staging.yml --env-file .env.staging pull api
+            docker compose -f docker-compose.staging.yml --env-file .env.staging up -d api
 
   e2e-staging:
     name: Run E2E tests against staging
@@ -305,10 +305,10 @@ jobs:
 
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
-            docker compose -f docker-compose.production.yml --env-file .env up -d mysql
+            docker compose -f docker-compose.production.yml --env-file .env.production up -d mysql
 
             for i in {1..30}; do
-              if docker compose -f docker-compose.production.yml --env-file .env ps mysql | grep -q "healthy"; then
+              if docker compose -f docker-compose.production.yml --env-file .env.production ps mysql | grep -q "healthy"; then
                 echo "MySQL is healthy"
                 break
               fi
@@ -317,8 +317,8 @@ jobs:
               sleep 5
             done
 
-            MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env | cut -d= -f2-)
-            MYSQL_ROOT_PASSWORD=$(grep '^MYSQL_ROOT_PASSWORD=' .env | cut -d= -f2-)
+            MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env.production | cut -d= -f2-)
+            MYSQL_ROOT_PASSWORD=$(grep '^MYSQL_ROOT_PASSWORD=' .env.production | cut -d= -f2-)
 
             CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=root;password=${MYSQL_ROOT_PASSWORD}"
 
@@ -331,5 +331,5 @@ jobs:
               ./artifacts/efbundle \
               --connection "$CONNECTION_STRING"
 
-            docker compose -f docker-compose.production.yml --env-file .env pull api
-            docker compose -f docker-compose.production.yml --env-file .env up -d api
+            docker compose -f docker-compose.production.yml --env-file .env.production pull api
+            docker compose -f docker-compose.production.yml --env-file .env.production up -d api
