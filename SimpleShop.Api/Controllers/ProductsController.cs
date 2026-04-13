@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SimpleShop.Api.Models;
 using SimpleShop.Api.Services;
+using SimpleShop.Api.FeatureFlags;
 
 namespace SimpleShop.Api.Controllers;
 
@@ -9,15 +10,23 @@ namespace SimpleShop.Api.Controllers;
 public class ProductsController : ControllerBase
 {
     private readonly ProductService _service;
+    private readonly FeatureDecisions _featureDecisions;
 
-    public ProductsController(ProductService service)
+    public ProductsController(ProductService service, FeatureDecisions featureDecisions)
     {
         _service = service;
+        _featureDecisions = featureDecisions;
     }
 
     [HttpGet]
     public async Task<ActionResult<List<Product>>> GetAll([FromQuery] string? search)
     {
+        if (!string.IsNullOrWhiteSpace(search) && !_featureDecisions.CanSearchProducts())
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { error = "Product search is currently disabled by feature toggle." });
+        }
+
         return Ok(await _service.GetAllAsync(search));
     }
 
@@ -66,6 +75,12 @@ public class ProductsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
+        if (!_featureDecisions.CanDeleteProducts())
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { error = "Product delete is currently disabled by feature toggle." });
+        }
+
         try
         {
             var deleted = await _service.DeleteAsync(id);

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SimpleShop.Api.Data;
 using SimpleShop.Api.Repositories;
 using SimpleShop.Api.Services;
+using SimpleShop.Api.FeatureFlags;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,8 @@ builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddSingleton<FeatureStateProvider>();
+builder.Services.AddScoped<FeatureDecisions>();
 
 var app = builder.Build();
 
@@ -36,5 +39,10 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.MapControllers();
+
+app.MapGet("/api/feature-toggles/{feature}", (FeatureStateProvider featureStateProvider, string feature) =>
+{
+    return Results.Ok(featureStateProvider.IsEnabled(feature));
+});
 
 await app.RunAsync();

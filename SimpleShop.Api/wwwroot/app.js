@@ -7,15 +7,51 @@ const searchInput = document.getElementById('search-input');
 const searchButton = document.getElementById('search-button');
 const loadAllButton = document.getElementById('load-all-button');
 
+const searchSection = searchInput.closest('.card');
+
+const featureState = {
+    productSearch: false,
+    productDelete: false
+};
+
 function setStatus(message, isError = false) {
     statusMessage.textContent = message;
     statusMessage.className = isError ? 'error' : 'success';
+}
+
+async function isFeatureEnabled(featureName) {
+    const response = await fetch(`/api/feature-toggles/${featureName}`);
+
+    if (!response.ok) {
+        throw new Error(`Could not load feature toggle: ${featureName}`);
+    }
+
+    return await response.json();
+}
+
+async function loadFeatureToggles() {
+    try {
+        featureState.productSearch = await isFeatureEnabled('ProductSearch');
+        featureState.productDelete = await isFeatureEnabled('ProductDelete');
+
+        if (!featureState.productSearch && searchSection) {
+            searchSection.style.display = 'none';
+        }
+    } catch (error) {
+        setStatus('Could not load feature toggles.', true);
+    }
 }
 
 function createDeleteButton(productId) {
     const button = document.createElement('button');
     button.textContent = 'Delete';
     button.setAttribute('data-testid', `delete-product-${productId}`);
+
+    if (!featureState.productDelete) {
+        button.disabled = true;
+        button.title = 'Delete feature is disabled';
+        return button;
+    }
 
     button.addEventListener('click', async () => {
         try {
@@ -24,7 +60,9 @@ function createDeleteButton(productId) {
             });
 
             if (!response.ok) {
-                throw new Error('Could not delete product.');
+                const errorBody = await response.json().catch(() => null);
+                const errorMessage = errorBody?.error ?? 'Could not delete product.';
+                throw new Error(errorMessage);
             }
 
             setStatus(`Deleted product ${productId}`);
@@ -58,11 +96,17 @@ function renderProducts(products) {
 
 async function loadProducts(search = '') {
     try {
+        if (search && !featureState.productSearch) {
+            throw new Error('Search feature is disabled.');
+        }
+
         const query = search ? `?search=${encodeURIComponent(search)}` : '';
         const response = await fetch(`/api/products${query}`);
 
         if (!response.ok) {
-            throw new Error('Could not load products.');
+            const errorBody = await response.json().catch(() => null);
+            const errorMessage = errorBody?.error ?? 'Could not load products.';
+            throw new Error(errorMessage);
         }
 
         const products = await response.json();
@@ -114,4 +158,9 @@ loadAllButton.addEventListener('click', async () => {
     await loadProducts();
 });
 
-loadProducts();
+async function init() {
+    await loadFeatureToggles();
+    await loadProducts();
+}
+
+init();

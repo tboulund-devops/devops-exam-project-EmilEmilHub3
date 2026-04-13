@@ -1,7 +1,6 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: simpleshop-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -18,20 +17,32 @@ services:
       timeout: 5s
       retries: 10
 
+  featurehub:
+    image: featurehub/party-server:latest
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    volumes:
+      - featurehub_data:/db
+
   api:
     build:
       context: .
       dockerfile: SimpleShop.Api/Dockerfile
-    container_name: simpleshop-api
     restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
+      featurehub:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "server=mysql;port=3306;database=simpleshop;user=app;password=app"
+      FeatureHub__EdgeUrl: "http://featurehub:8085"
+      FeatureHub__ApiKey: "21dad089-fe08-4473-87ae-d53ad34100c9/LdZNGY3PlehXBIxIcJUzOQFNkBSs2KP0bR66WvQ4"
     ports:
       - "8080:8080"
 
 volumes:
   mysql_data:
+  featurehub_data:
