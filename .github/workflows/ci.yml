@@ -58,8 +58,8 @@ jobs:
             /d:sonar.coverageReportPaths="CoverageReport/SonarQube.xml" \
             /d:sonar.qualitygate.wait=true \
             /d:sonar.qualitygate.timeout=300 \
-            /d:sonar.exclusions="CoverageReport/**,StrykerOutput/**,**/Migrations/**" \
-            /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/*DbContext*.cs**/wwwroot/**,**/FeatureFlags/**,**/tests/**"
+            /d:sonar.exclusions="CoverageReport/**,StrykerOutput/**,**/Migrations/**,**/wwwroot/**,**/tests/**" \
+            /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/*DbContext*.cs,**/wwwroot/**,**/FeatureFlags/**,**/tests/**"
 
           EXIT_CODE=$?
           echo "SONAR_BEGIN_EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
@@ -101,7 +101,7 @@ jobs:
             -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"CoverageReport" \
             -reporttypes:"Html;TextSummary;SonarQube" \
-            -filefilters:"-**/Migrations/**;-**/Program.cs;-**/*DbContext*.cs" || true
+            -filefilters:"-**/Migrations/**;-**/Program.cs;-**/*DbContext*.cs;-**/FeatureFlags/**" || true
 
       - name: SonarQube - End
         if: always()
