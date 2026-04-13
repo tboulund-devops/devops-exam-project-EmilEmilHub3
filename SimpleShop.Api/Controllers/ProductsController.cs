@@ -18,6 +18,7 @@ public class ProductsController : ControllerBase
         _featureDecisions = featureDecisions;
     }
 
+
     [HttpGet]
     public async Task<ActionResult<List<Product>>> GetAll([FromQuery] string? search)
     {
