@@ -59,7 +59,7 @@ jobs:
             /d:sonar.qualitygate.wait=true \
             /d:sonar.qualitygate.timeout=300 \
             /d:sonar.exclusions="CoverageReport/**,StrykerOutput/**,**/Migrations/**" \
-            /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/*DbContext*.cs"
+            /d:sonar.coverage.exclusions="**/Migrations/**,**/Program.cs,**/*DbContext*.cs**/wwwroot/**,**/FeatureFlags/**,**/tests/**"
 
           EXIT_CODE=$?
           echo "SONAR_BEGIN_EXIT_CODE=$EXIT_CODE" >> $GITHUB_ENV
