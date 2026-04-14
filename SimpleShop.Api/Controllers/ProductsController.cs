@@ -18,13 +18,12 @@ public class ProductsController : ControllerBase
         _featureDecisions = featureDecisions;
     }
 
-
     [HttpGet]
     public async Task<ActionResult<List<Product>>> GetAll([FromQuery] string? search)
     {
         if (!string.IsNullOrWhiteSpace(search) &&
             _featureDecisions is not null &&
-            !_featureDecisions.CanSearchProducts())
+            !await _featureDecisions.CanSearchProducts())
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable,
                 new { error = "Product search is currently disabled by feature toggle." });
@@ -78,7 +77,8 @@ public class ProductsController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        if (_featureDecisions is not null && !_featureDecisions.CanDeleteProducts())
+        if (_featureDecisions is not null &&
+            !await _featureDecisions.CanDeleteProducts())
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable,
                 new { error = "Product delete is currently disabled by feature toggle." });

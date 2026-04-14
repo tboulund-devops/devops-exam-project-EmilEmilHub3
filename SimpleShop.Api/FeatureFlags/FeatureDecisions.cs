@@ -9,13 +9,13 @@ public class FeatureDecisions
         _featureStateProvider = featureStateProvider;
     }
 
-    public bool CanSearchProducts()
+    public async Task<bool> CanSearchProducts()
     {
-        return _featureStateProvider.IsEnabled("ProductSearch");
+        return await _featureStateProvider.IsEnabledAsync("ProductSearch");
     }
 
-    public bool CanDeleteProducts()
+    public async Task<bool> CanDeleteProducts()
     {
-        return _featureStateProvider.IsEnabled("ProductDelete");
+        return await _featureStateProvider.IsEnabledAsync("ProductDelete");
     }
 }
