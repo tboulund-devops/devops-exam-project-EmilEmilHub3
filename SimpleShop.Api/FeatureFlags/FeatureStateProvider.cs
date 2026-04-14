@@ -66,7 +66,9 @@ public class FeatureStateProvider
 
             var rawValue = context[featureKey].Value;
 
+            Console.WriteLine($"[FeatureHub] Feature: {featureKey}");
             Console.WriteLine($"[FeatureHub] Value: {rawValue}");
+            Console.WriteLine($"[FeatureHub] Raw value type: {rawValue?.GetType()}");
 
             return rawValue is bool enabled && enabled;
         }
