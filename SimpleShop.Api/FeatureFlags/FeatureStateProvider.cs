@@ -42,4 +42,34 @@ public class FeatureStateProvider
 
         return Task.FromResult(isSet && isEnabled);
     }
+
+    public Task<object> GetDebugInfo(string featureKey, string userKey = "test-user")
+    {
+        var context = _config.NewContext()
+            .UserKey(userKey)
+            .Country(StrategyAttributeCountryName.Denmark)
+            .Build()
+            .GetAwaiter()
+            .GetResult();
+
+        var isEnabled = context.IsEnabled(featureKey);
+        var isSet = context.IsSet(featureKey);
+        var rawValue = context[featureKey].Value;
+        var stringValue = context[featureKey].StringValue;
+
+        Console.WriteLine($"[FeatureHub] Feature: {featureKey}");
+        Console.WriteLine($"[FeatureHub] IsEnabled: {isEnabled}");
+        Console.WriteLine($"[FeatureHub] IsSet: {isSet}");
+        Console.WriteLine($"[FeatureHub] RawValue: {rawValue}");
+        Console.WriteLine($"[FeatureHub] StringValue: {stringValue}");
+
+        return Task.FromResult<object>(new
+        {
+            featureKey,
+            isEnabled,
+            isSet,
+            rawValue,
+            stringValue
+        });
+    }
 }

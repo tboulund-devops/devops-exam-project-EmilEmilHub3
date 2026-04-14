@@ -43,8 +43,8 @@ app.MapControllers();
 
 app.MapGet("/api/feature-toggles/{feature}", async (FeatureStateProvider featureStateProvider, string feature) =>
 {
-    var enabled = await featureStateProvider.IsEnabled(feature);
-    return Results.Ok(enabled);
+    var result = await featureStateProvider.GetDebugInfo(feature);
+    return Results.Ok(result);
 });
 
 await app.RunAsync();
