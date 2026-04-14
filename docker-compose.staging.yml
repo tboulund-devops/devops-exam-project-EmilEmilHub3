@@ -23,6 +23,17 @@ services:
     volumes:
       - featurehub_staging_data:/db
 
+  featurehub-edge:
+    image: featurehub/edge:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      EDGE_EVENTS_URL: http://featurehub:8085
+    depends_on:
+      featurehub:
+        condition: service_started
+
   api:
     image: ${IMAGE_NAME}:staging
     restart: unless-stopped
@@ -30,6 +41,8 @@ services:
       mysql:
         condition: service_healthy
       featurehub:
+        condition: service_started
+      featurehub-edge:
         condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
