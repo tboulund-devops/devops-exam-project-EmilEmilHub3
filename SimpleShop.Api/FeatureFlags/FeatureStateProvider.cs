@@ -6,6 +6,7 @@ namespace SimpleShop.Api.FeatureFlags;
 public class FeatureStateProvider
 {
     private readonly EdgeFeatureHubConfig? _config;
+    private readonly Task? _initTask;
 
     public FeatureStateProvider(IConfiguration configuration)
     {
@@ -20,20 +21,14 @@ public class FeatureStateProvider
             Console.WriteLine($"[FeatureHub] EdgeUrl: {edgeUrl}");
             Console.WriteLine($"[FeatureHub] ApiKey prefix: {apiKey[..Math.Min(8, apiKey.Length)]}...");
 
-            var config = new EdgeFeatureHubConfig(edgeUrl, apiKey);
+            _config = new EdgeFeatureHubConfig(edgeUrl, apiKey);
+            _initTask = _config.Init();
 
-            Task.Run(async () =>
-            {
-                Console.WriteLine("[FeatureHub] Init async...");
-                await config.Init();
-                Console.WriteLine("[FeatureHub] Init done.");
-            });
-
-            _config = config;
+            Console.WriteLine("[FeatureHub] Init started.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[FeatureHub] Init failed: {ex}");
+            Console.WriteLine($"[FeatureHub] Init setup failed: {ex}");
         }
     }
 
@@ -41,28 +36,31 @@ public class FeatureStateProvider
     {
         try
         {
-            if (_config == null)
+            if (_config == null || _initTask == null)
             {
-                Console.WriteLine("[FeatureHub] Config is null -> false");
+                Console.WriteLine("[FeatureHub] Config/init task is null -> false");
                 return false;
             }
 
-            Console.WriteLine($"[FeatureHub] Checking feature '{featureKey}'...");
+            await _initTask;
+
+            Console.WriteLine($"[FeatureHub] Checking feature '{featureKey}' for user '{userKey}'");
 
             var context = await _config.NewContext()
                 .UserKey(userKey)
                 .Country(StrategyAttributeCountryName.Denmark)
                 .Build();
 
-            var rawValue = context[featureKey].Value;
+            var featureState = context[featureKey];
+            var rawValue = featureState?.Value;
 
-            Console.WriteLine($"[FeatureHub] Value: {rawValue}");
+            Console.WriteLine($"[FeatureHub] Feature '{featureKey}' raw value: {rawValue} (type: {rawValue?.GetType().Name ?? "null"})");
 
             return rawValue is bool enabled && enabled;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[FeatureHub] ERROR: {ex}");
+            Console.WriteLine($"[FeatureHub] Failed to evaluate '{featureKey}': {ex}");
             return false;
         }
     }
