@@ -42,9 +42,9 @@ public class FeatureStateProvider
                 return false;
             }
 
+            Console.WriteLine($"[FeatureHub] Waiting for init before checking '{featureKey}'...");
             await _initTask;
-
-            Console.WriteLine($"[FeatureHub] Checking feature '{featureKey}'...");
+            Console.WriteLine("[FeatureHub] Init done.");
 
             var contextTask = _config.NewContext()
                 .UserKey(userKey)
