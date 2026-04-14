@@ -39,6 +39,9 @@ public class FeatureStateProvider
         Console.WriteLine($"[FeatureHub] Value: {value}");
         Console.WriteLine($"[FeatureHub] Type: {value?.GetType()}");
 
-        return Task.FromResult((bool)value);
+        if (value is bool boolValue)
+            return Task.FromResult(boolValue);
+
+        return Task.FromResult(false);
     }
 }
