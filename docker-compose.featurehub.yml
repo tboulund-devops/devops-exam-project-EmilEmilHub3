@@ -1,0 +1,11 @@
+services:
+  featurehub:
+    image: featurehub/party-server:latest
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    volumes:
+      - featurehub_shared_data:/db
+
+volumes:
+  featurehub_shared_data:
