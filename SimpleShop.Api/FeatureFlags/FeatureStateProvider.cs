@@ -44,28 +44,33 @@ public class FeatureStateProvider
 
             await _initTask;
 
-            var contextTask = _config.NewContext()
+            var context = await _config.NewContext()
                 .UserKey(userKey)
                 .Country(StrategyAttributeCountryName.Denmark)
                 .Build();
 
-            var completed = await Task.WhenAny(contextTask, Task.Delay(10000));
+            var featureState = context[featureKey];
 
-            if (completed != contextTask)
+            if (featureState == null)
             {
-                Console.WriteLine("[FeatureHub] TIMEOUT -> returning false");
+                Console.WriteLine($"[FeatureHub] Feature '{featureKey}' not found -> false");
                 return false;
             }
 
-            var context = await contextTask;
-
-            var rawValue = context[featureKey].Value;
+            var value = featureState.Value;
 
             Console.WriteLine($"[FeatureHub] Feature: {featureKey}");
-            Console.WriteLine($"[FeatureHub] Value: {rawValue}");
-            Console.WriteLine($"[FeatureHub] Type: {rawValue?.GetType()}");
+            Console.WriteLine($"[FeatureHub] Value: {value}");
+            Console.WriteLine($"[FeatureHub] Type: {value?.GetType()}");
 
-            return rawValue is bool enabled && enabled;
+            if (value is bool boolValue)
+                return boolValue;
+
+            // fallback hvis FeatureHub returnerer string
+            if (value is string strValue)
+                return strValue.Equals("true", StringComparison.OrdinalIgnoreCase);
+
+            return false;
         }
         catch (Exception ex)
         {
