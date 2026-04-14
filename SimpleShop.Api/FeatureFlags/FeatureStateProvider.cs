@@ -53,20 +53,27 @@ public class FeatureStateProvider
 
             if (featureState == null)
             {
-                Console.WriteLine($"[FeatureHub] Feature '{featureKey}' not found -> false");
+                Console.WriteLine($"[FeatureHub] FeatureState for '{featureKey}' is null");
                 return false;
             }
 
+            Console.WriteLine($"[FeatureHub] FeatureState object for '{featureKey}': {featureState}");
+
             var value = featureState.Value;
+
+            if (value == null)
+            {
+                Console.WriteLine($"[FeatureHub] Feature '{featureKey}' returned null value");
+                return false;
+            }
 
             Console.WriteLine($"[FeatureHub] Feature: {featureKey}");
             Console.WriteLine($"[FeatureHub] Value: {value}");
-            Console.WriteLine($"[FeatureHub] Type: {value?.GetType()}");
+            Console.WriteLine($"[FeatureHub] Type: {value.GetType()}");
 
             if (value is bool boolValue)
                 return boolValue;
 
-            // fallback hvis FeatureHub returnerer string
             if (value is string strValue)
                 return strValue.Equals("true", StringComparison.OrdinalIgnoreCase);
 
@@ -78,4 +85,5 @@ public class FeatureStateProvider
             return false;
         }
     }
+}
 }
