@@ -22,7 +22,6 @@ public class FeatureStateProvider
 
             var config = new EdgeFeatureHubConfig(edgeUrl, apiKey);
 
-            // 🔥 IKKE BLOCKING
             Task.Run(async () =>
             {
                 Console.WriteLine("[FeatureHub] Init async...");
@@ -38,13 +37,13 @@ public class FeatureStateProvider
         }
     }
 
-    public async Task<bool> IsEnabledAsync(string featureKey, string userKey = "simpleshop-user")
+    public async Task<bool> IsEnabled(string featureKey, string userKey = "simpleshop-user")
     {
         try
         {
             if (_config == null)
             {
-                Console.WriteLine("[FeatureHub] Config is null → false");
+                Console.WriteLine("[FeatureHub] Config is null -> false");
                 return false;
             }
 

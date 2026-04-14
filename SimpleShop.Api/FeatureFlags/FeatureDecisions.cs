@@ -11,11 +11,11 @@ public class FeatureDecisions
 
     public async Task<bool> CanSearchProducts()
     {
-        return await _featureStateProvider.IsEnabledAsync("ProductSearch");
+        return await _featureStateProvider.IsEnabled("ProductSearch");
     }
 
     public async Task<bool> CanDeleteProducts()
     {
-        return await _featureStateProvider.IsEnabledAsync("ProductDelete");
+        return await _featureStateProvider.IsEnabled("ProductDelete");
     }
 }
