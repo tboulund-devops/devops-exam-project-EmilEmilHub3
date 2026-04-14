@@ -113,15 +113,14 @@ jobs:
 
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
-            docker compose -f docker-compose.staging.yml --env-file .env.staging up -d mysql
+            docker compose -f docker-compose.staging.yml --env-file .env.staging up -d mysql featurehub
 
             for i in {1..30}; do
               if docker compose -f docker-compose.staging.yml --env-file .env.staging ps mysql | grep -q "healthy"; then
                 echo "MySQL is healthy"
                 break
               fi
-
-              echo "Waiting for MySQL to become healthy..."
+              echo "Waiting for MySQL..."
               sleep 5
             done
 
@@ -151,147 +150,76 @@ jobs:
       STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Install Chrome
-        uses: browser-actions/setup-chrome@v1
+      - uses: browser-actions/setup-chrome@v1
 
-      - name: Install npm packages
-        run: npm install
+      - run: npm install
 
-      - name: Print staging URL
-        run: echo "STAGING_BASE_URL=$STAGING_BASE_URL"
-
-      - name: Wait for staging to become ready
+      - name: Wait for staging
         run: |
-          echo "Checking $STAGING_BASE_URL/api/products"
-
-          sleep 20
-
-          for i in {1..60}; do
-            if curl -fsS "$STAGING_BASE_URL/api/products" > /dev/null; then
-              echo "Staging is ready"
+          for i in {1..30}; do
+            if curl --fail --silent --max-time 10 "$STAGING_BASE_URL/api/products"; then
+              echo "Ready"
               exit 0
             fi
-
-            echo "Attempt $i failed, waiting 5 seconds..."
             sleep 5
           done
-
-          echo "Staging did not become ready in time"
           exit 1
 
-      - name: Run TestCafe E2E on staging
-        env:
-          CHROME_BIN: /usr/bin/google-chrome
-          BASE_URL: ${{ vars.STAGING_BASE_URL }}
+      - name: Run TestCafe
         run: npx testcafe chrome:headless tests/e2e/*.js
 
   performance-staging:
-    name: Run K6 performance test against staging
+    name: Run K6 performance test
     runs-on: ubuntu-latest
     needs: Delivery
     env:
       STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
+      - uses: actions/checkout@v4
 
-      - name: Install k6
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gnupg ca-certificates
-          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+      - run: |
           sudo apt-get update
           sudo apt-get install -y k6
 
-      - name: Print staging URL
-        run: echo "STAGING_BASE_URL=$STAGING_BASE_URL"
-
-      - name: Wait for staging to become ready
+      - name: Wait for staging
         run: |
-          echo "Checking $STAGING_BASE_URL/api/products"
-
-          sleep 20
-
-          for i in {1..60}; do
-            if curl -fsS "$STAGING_BASE_URL/api/products" > /dev/null; then
-              echo "Staging is ready"
+          for i in {1..30}; do
+            if curl --fail --silent --max-time 10 "$STAGING_BASE_URL/api/products"; then
+              echo "Ready"
               exit 0
             fi
-
-            echo "Attempt $i failed, waiting 5 seconds..."
             sleep 5
           done
-
-          echo "Staging did not become ready in time"
           exit 1
 
-      - name: Run K6 on staging
-        env:
-          BASE_URL: ${{ vars.STAGING_BASE_URL }}
+      - name: Run K6
         run: k6 run tests/performance/products-load.js
-
 
   deployment:
     name: Deploy to production
     runs-on: ubuntu-latest
-    needs:
-      - Delivery
-      - e2e-staging
-      - performance-staging
+    needs: [Delivery, e2e-staging, performance-staging]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Restore .NET dependencies
-        run: dotnet restore SimpleShop.Api/SimpleShop.Api.csproj -r linux-x64
-
-      - name: Create EF migration bundle
-        run: |
-          dotnet tool install --global dotnet-ef
-          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
-
-          mkdir -p artifacts
-
-          dotnet ef migrations bundle \
-            --project SimpleShop.Api/SimpleShop.Api.csproj \
-            --startup-project SimpleShop.Api/SimpleShop.Api.csproj \
-            --configuration Release \
-            --runtime linux-x64 \
-            --self-contained \
-            --output artifacts/efbundle
-
-      - name: Copy production compose file and EF bundle
+      - name: Copy production compose
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          source: "docker-compose.production.yml,artifacts/efbundle"
+          source: "docker-compose.production.yml"
           target: "simpleshop"
 
-      - name: Deploy to production
+      - name: Deploy production
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
@@ -300,39 +228,11 @@ jobs:
           script: |
             set -e
 
-            mkdir -p ~/simpleshop
             cd ~/simpleshop
 
-            chmod +x artifacts/efbundle
+            if [ ! -f .env.production ]; then
+              echo ".env.production missing"
+              exit 1
+            fi
 
-            echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
-
-            docker compose -f docker-compose.production.yml --env-file .env.production up -d mysql
-
-            for i in {1..30}; do
-              if docker compose -f docker-compose.production.yml --env-file .env.production ps mysql | grep -q "healthy"; then
-                echo "MySQL is healthy"
-                break
-              fi
-
-              echo "Waiting for MySQL to become healthy..."
-              sleep 5
-            done
-
-            MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env.production | cut -d= -f2-)
-            MYSQL_USER=$(grep '^MYSQL_USER=' .env.production | cut -d= -f2-)
-            MYSQL_PASSWORD=$(grep '^MYSQL_PASSWORD=' .env.production | cut -d= -f2-)
-
-            CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
-
-            docker run --rm \
-              --network simpleshop_default \
-              -e ConnectionStrings__DefaultConnection="$CONNECTION_STRING" \
-              -v "$PWD:/work" \
-              -w /work \
-              mcr.microsoft.com/dotnet/runtime-deps:8.0 \
-              ./artifacts/efbundle \
-              --connection "$CONNECTION_STRING"
-
-            docker compose -f docker-compose.production.yml --env-file .env.production pull api
-            docker compose -f docker-compose.production.yml --env-file .env.production up -d api
+            docker compose -f docker-compose.production.yml --env-file .env.production up -d mysql featurehub api
