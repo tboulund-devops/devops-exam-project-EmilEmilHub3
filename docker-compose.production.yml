@@ -19,7 +19,7 @@ services:
     image: featurehub/party-server:latest
     restart: unless-stopped
     ports:
-      - "8085:8085"
+      - "8086:8085"
     volumes:
       - featurehub_production_data:/db
 
@@ -38,7 +38,7 @@ services:
       FeatureHub__EdgeUrl: ${FeatureHub__EdgeUrl}
       FeatureHub__ApiKey: ${FeatureHub__ApiKey}
     ports:
-      - "81:8080"
+      - "8000:8080"
 
 volumes:
   mysql_production_data:
