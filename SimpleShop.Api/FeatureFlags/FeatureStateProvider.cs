@@ -51,7 +51,7 @@ public class FeatureStateProvider
                 .Country(StrategyAttributeCountryName.Denmark)
                 .Build();
 
-            var completed = await Task.WhenAny(contextTask, Task.Delay(2000));
+            var completed = await Task.WhenAny(contextTask, Task.Delay(10000));
 
             if (completed != contextTask)
             {
