@@ -33,15 +33,13 @@ public class FeatureStateProvider
             .GetAwaiter()
             .GetResult();
 
-        var value = context[featureKey].Value;
+        var isEnabled = context.IsEnabled(featureKey);
+        var isSet = context.IsSet(featureKey);
 
         Console.WriteLine($"[FeatureHub] Feature: {featureKey}");
-        Console.WriteLine($"[FeatureHub] Value: {value}");
-        Console.WriteLine($"[FeatureHub] Type: {value?.GetType()}");
+        Console.WriteLine($"[FeatureHub] IsEnabled: {isEnabled}");
+        Console.WriteLine($"[FeatureHub] IsSet: {isSet}");
 
-        if (value is bool boolValue)
-            return Task.FromResult(boolValue);
-
-        return Task.FromResult(false);
+        return Task.FromResult(isSet && isEnabled);
     }
 }
