@@ -6,7 +6,6 @@ namespace SimpleShop.Api.FeatureFlags;
 public class FeatureStateProvider
 {
     private readonly EdgeFeatureHubConfig? _config;
-   
 
     public FeatureStateProvider(IConfiguration configuration)
     {
@@ -21,14 +20,20 @@ public class FeatureStateProvider
             Console.WriteLine($"[FeatureHub] EdgeUrl: {edgeUrl}");
             Console.WriteLine($"[FeatureHub] ApiKey prefix: {apiKey[..Math.Min(8, apiKey.Length)]}...");
 
-            _config = new EdgeFeatureHubConfig(edgeUrl, apiKey);
-            _initTask = _config.Init();
+            var config = new EdgeFeatureHubConfig(edgeUrl, apiKey);
 
-            Console.WriteLine("[FeatureHub] Init started.");
+            Task.Run(async () =>
+            {
+                Console.WriteLine("[FeatureHub] Init async...");
+                await config.Init();
+                Console.WriteLine("[FeatureHub] Init done.");
+            });
+
+            _config = config;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[FeatureHub] Init setup failed: {ex}");
+            Console.WriteLine($"[FeatureHub] Init failed: {ex}");
         }
     }
 
