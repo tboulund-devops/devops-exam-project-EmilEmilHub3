@@ -42,9 +42,7 @@ public class FeatureStateProvider
                 return false;
             }
 
-            Console.WriteLine($"[FeatureHub] Waiting for init before checking '{featureKey}'...");
             await _initTask;
-            Console.WriteLine("[FeatureHub] Init done.");
 
             var contextTask = _config.NewContext()
                 .UserKey(userKey)
@@ -61,19 +59,11 @@ public class FeatureStateProvider
 
             var context = await contextTask;
 
-            var productSearchValue = context["ProductSearch"].Value;
-            var productDeleteValue = context["ProductDelete"].Value;
-
-            Console.WriteLine($"[FeatureHub] ProductSearch value: {productSearchValue}");
-            Console.WriteLine($"[FeatureHub] ProductSearch type: {productSearchValue?.GetType()}");
-            Console.WriteLine($"[FeatureHub] ProductDelete value: {productDeleteValue}");
-            Console.WriteLine($"[FeatureHub] ProductDelete type: {productDeleteValue?.GetType()}");
-
             var rawValue = context[featureKey].Value;
 
             Console.WriteLine($"[FeatureHub] Feature: {featureKey}");
             Console.WriteLine($"[FeatureHub] Value: {rawValue}");
-            Console.WriteLine($"[FeatureHub] Raw value type: {rawValue?.GetType()}");
+            Console.WriteLine($"[FeatureHub] Type: {rawValue?.GetType()}");
 
             return rawValue is bool enabled && enabled;
         }

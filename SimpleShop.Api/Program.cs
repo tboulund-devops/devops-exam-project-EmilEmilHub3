@@ -24,6 +24,7 @@ builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
+
 builder.Services.AddSingleton<FeatureStateProvider>();
 builder.Services.AddScoped<FeatureDecisions>();
 
@@ -40,9 +41,10 @@ app.UseStaticFiles();
 
 app.MapControllers();
 
-app.MapGet("/api/feature-toggles/{feature}", (FeatureStateProvider featureStateProvider, string feature) =>
+app.MapGet("/api/feature-toggles/{feature}", async (FeatureStateProvider featureStateProvider, string feature) =>
 {
-    return Results.Ok(featureStateProvider.IsEnabled(feature));
+    var enabled = await featureStateProvider.IsEnabled(feature);
+    return Results.Ok(enabled);
 });
 
 await app.RunAsync();
