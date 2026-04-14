@@ -36,31 +36,38 @@ public class FeatureStateProvider
     {
         try
         {
-            if (_config == null || _initTask == null)
+            if (_config == null)
             {
-                Console.WriteLine("[FeatureHub] Config/init task is null -> false");
+                Console.WriteLine("[FeatureHub] Config is null -> false");
                 return false;
             }
 
-            await _initTask;
+            Console.WriteLine($"[FeatureHub] Checking feature '{featureKey}'...");
 
-            Console.WriteLine($"[FeatureHub] Checking feature '{featureKey}' for user '{userKey}'");
-
-            var context = await _config.NewContext()
+            var contextTask = _config.NewContext()
                 .UserKey(userKey)
                 .Country(StrategyAttributeCountryName.Denmark)
                 .Build();
 
-            var featureState = context[featureKey];
-            var rawValue = featureState?.Value;
+            var completed = await Task.WhenAny(contextTask, Task.Delay(2000));
 
-            Console.WriteLine($"[FeatureHub] Feature '{featureKey}' raw value: {rawValue} (type: {rawValue?.GetType().Name ?? "null"})");
+            if (completed != contextTask)
+            {
+                Console.WriteLine("[FeatureHub] TIMEOUT -> returning false");
+                return false;
+            }
+
+            var context = await contextTask;
+
+            var rawValue = context[featureKey].Value;
+
+            Console.WriteLine($"[FeatureHub] Value: {rawValue}");
 
             return rawValue is bool enabled && enabled;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[FeatureHub] Failed to evaluate '{featureKey}': {ex}");
+            Console.WriteLine($"[FeatureHub] ERROR: {ex}");
             return false;
         }
     }
