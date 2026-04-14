@@ -6,7 +6,7 @@ namespace SimpleShop.Api.FeatureFlags;
 public class FeatureStateProvider
 {
     private readonly EdgeFeatureHubConfig? _config;
-    private readonly Task? _initTask;
+   
 
     public FeatureStateProvider(IConfiguration configuration)
     {
