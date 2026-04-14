@@ -26,8 +26,6 @@ services:
   featurehub-edge:
     image: featurehub/edge:latest
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     environment:
       EDGE_EVENTS_URL: http://featurehub:8085
     depends_on:
