@@ -86,13 +86,13 @@ jobs:
           generateReleaseNotes: true
           allowUpdates: true
 
-      - name: Copy staging compose file and EF bundle
+      - name: Copy staging compose files and EF bundle
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
-          source: "docker-compose.staging.yml,artifacts/efbundle"
+          source: "docker-compose.staging.yml,docker-compose.featurehub.yml,artifacts/efbundle"
           target: "simpleshop"
 
       - name: Deploy to staging
@@ -108,7 +108,13 @@ jobs:
             chmod +x artifacts/efbundle
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
-            docker compose -f docker-compose.staging.yml --env-file .env.staging up -d mysql featurehub
+            if [ ! -f .env.staging ]; then
+              echo ".env.staging missing"
+              exit 1
+            fi
+
+            docker compose -f docker-compose.featurehub.yml up -d
+            docker compose -f docker-compose.staging.yml --env-file .env.staging up -d mysql
 
             for i in {1..30}; do
               if docker compose -f docker-compose.staging.yml --env-file .env.staging ps mysql | grep -q "healthy"; then
@@ -265,13 +271,13 @@ jobs:
             --self-contained \
             --output artifacts/efbundle
 
-      - name: Copy production compose file and EF bundle
+      - name: Copy production compose files and EF bundle
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          source: "docker-compose.production.yml,artifacts/efbundle"
+          source: "docker-compose.production.yml,docker-compose.featurehub.yml,artifacts/efbundle"
           target: "simpleshop"
 
       - name: Deploy to production
@@ -292,7 +298,8 @@ jobs:
               exit 1
             fi
 
-            docker compose -f docker-compose.production.yml --env-file .env.production up -d mysql featurehub
+            docker compose -f docker-compose.featurehub.yml up -d
+            docker compose -f docker-compose.production.yml --env-file .env.production up -d mysql
 
             for i in {1..30}; do
               if docker compose -f docker-compose.production.yml --env-file .env.production ps mysql | grep -q "healthy"; then
