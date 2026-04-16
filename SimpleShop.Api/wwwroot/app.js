@@ -26,7 +26,8 @@ async function isFeatureEnabled(featureName) {
         throw new Error(`Could not load feature toggle: ${featureName}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    return result.isEnabled; 
 }
 
 async function loadFeatureToggles() {
