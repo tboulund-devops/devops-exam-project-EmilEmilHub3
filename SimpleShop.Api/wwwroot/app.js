@@ -19,6 +19,19 @@ function setStatus(message, isError = false) {
     statusMessage.className = isError ? 'error' : 'success';
 }
 
+function updateSearchUI() {
+    if (searchSection) {
+        searchSection.style.display = featureState.productSearch ? '' : 'none';
+    }
+
+    searchInput.disabled = !featureState.productSearch;
+    searchButton.disabled = !featureState.productSearch;
+
+    if (!featureState.productSearch) {
+        searchInput.value = '';
+    }
+}
+
 async function isFeatureEnabled(featureName) {
     const response = await fetch(`/api/feature-toggles/${featureName}`);
 
@@ -27,7 +40,7 @@ async function isFeatureEnabled(featureName) {
     }
 
     const result = await response.json();
-    return result.isEnabled; 
+    return result.isEnabled;
 }
 
 async function loadFeatureToggles() {
@@ -35,9 +48,7 @@ async function loadFeatureToggles() {
         featureState.productSearch = await isFeatureEnabled('ProductSearch');
         featureState.productDelete = await isFeatureEnabled('ProductDelete');
 
-        if (searchSection) {
-            searchSection.style.display = featureState.productSearch ? '' : 'none';
-        }
+        updateSearchUI();
     } catch (error) {
         setStatus('Could not load feature toggles.', true);
     }
@@ -112,7 +123,12 @@ async function loadProducts(search = '') {
 
         const products = await response.json();
         renderProducts(products);
-        setStatus(`Loaded ${products.length} product(s)`);
+
+        if (search) {
+            setStatus(`Loaded ${products.length} product(s) matching "${search}"`);
+        } else {
+            setStatus(`Loaded ${products.length} product(s)`);
+        }
     } catch (error) {
         setStatus(error.message, true);
     }
@@ -151,6 +167,11 @@ createProductForm.addEventListener('submit', async (event) => {
 });
 
 searchButton.addEventListener('click', async () => {
+    if (!featureState.productSearch) {
+        setStatus('Search feature is disabled.', true);
+        return;
+    }
+
     await loadProducts(searchInput.value.trim());
 });
 
