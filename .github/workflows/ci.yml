@@ -11,28 +11,29 @@ jobs:
   integration:
     runs-on: ubuntu-latest
 
-    # Global environment variables used throughout the pipeline.
+    # Global environment variables used across the CI job.
     env:
       CONFIGURATION: Release
       COVERAGE_THRESHOLD: "70"
-      MUTATION_HIGH: "80"
-      MUTATION_LOW: "50"
-      MUTATION_BREAK: "50"
 
     steps:
-      # Checks out the repository so the workflow can access the source code.
+      # Checkout the full repository history.
+      # fetch-depth: 0 is useful for SonarQube and other analysis tools.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Installs the required .NET SDK version.
+      # Install the required .NET SDK version.
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
-      # Installs the tools needed for reporting, mutation testing, and SonarQube analysis.
+      # Install global .NET tools used by the pipeline.
+      # - ReportGenerator: creates readable coverage reports
+      # - Stryker: performs mutation testing
+      # - SonarScanner: integrates with SonarQube
       - name: Install required tools
         run: |
           dotnet tool install --global dotnet-reportgenerator-globaltool
@@ -40,13 +41,13 @@ jobs:
           dotnet tool install --global dotnet-sonarscanner
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
-      # Restores all NuGet dependencies.
+      # Restore all NuGet dependencies before building.
       - name: Restore
         run: dotnet restore
 
-      # Starts SonarQube analysis.
-      # This step is allowed to fail so the rest of the pipeline can still run,
-      # but the final enforcement step will fail the job if SonarQube was enabled and did not complete successfully.
+      # Start SonarQube analysis.
+      # This step is allowed to fail so the workflow can continue and report all results.
+      # A flag is stored so the pipeline knows whether SonarQube end should run later.
       - name: SonarQube - Begin
         id: sonar_begin
         continue-on-error: true
@@ -81,34 +82,36 @@ jobs:
 
           exit 0
 
-      # Builds the solution in Release mode.
+      # Build the solution in Release configuration.
+      # --no-restore is used because restore was already completed earlier.
       - name: Build
-        run: dotnet build SimpleShop.sln -c $CONFIGURATION --no-restore
+        run: dotnet build -c $CONFIGURATION --no-restore
 
-      # Runs the test suite and collects code coverage data.
-      # The step is allowed to continue so we can still generate reports and upload artifacts.
+      # Run unit tests and collect code coverage.
+      # The step continues on error so the workflow can still generate reports and fail in a controlled way later.
       - name: Run unit tests (with coverage)
         id: tests
         continue-on-error: true
         run: |
           set +e
-
           dotnet test SimpleShop.sln -c $CONFIGURATION --no-build \
             --collect:"XPlat Code Coverage" \
             --results-directory ./TestResults \
             --settings ./coverlet.runsettings
-
           echo "TEST_EXIT_CODE=$?" >> $GITHUB_ENV
           exit 0
 
-      # Ensures the artifact folders always exist, even if previous steps failed.
+      # Ensure report output folders exist before generating reports and uploading artifacts.
       - name: Prepare report folders
         if: always()
         run: |
           mkdir -p CoverageReport
           mkdir -p StrykerOutput
 
-      # Generates HTML, text, and SonarQube-compatible coverage reports.
+      # Generate coverage reports in multiple formats:
+      # - HTML for browsing
+      # - TextSummary for threshold validation
+      # - SonarQube for SonarQube import
       - name: Generate coverage report
         if: always()
         continue-on-error: true
@@ -117,9 +120,9 @@ jobs:
             -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"CoverageReport" \
             -reporttypes:"Html;TextSummary;SonarQube" \
-            -filefilters:"-**/Migrations/**;-**/Program.cs;-**/*DbContext*.cs;-**/FeatureFlags/**"
+            -filefilters:"-**/Migrations/**;-**/Program.cs;-**/*DbContext*.cs;-**/FeatureFlags/**" || true
 
-      # Completes SonarQube analysis.
+      # Finalize SonarQube analysis only if the begin step succeeded.
       - name: SonarQube - End
         if: always()
         continue-on-error: true
@@ -127,7 +130,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           set +e
-
           if [ "${SONAR_ENABLED}" = "1" ]; then
             dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
             echo "SONAR_END_EXIT_CODE=$?" >> $GITHUB_ENV
@@ -135,58 +137,37 @@ jobs:
             echo "Skipping SonarQube end because begin failed."
             echo "SONAR_END_EXIT_CODE=1" >> $GITHUB_ENV
           fi
-
           exit 0
 
-      # Runs mutation testing with Stryker.
-      # Output path and reporters are set explicitly to make sure artifacts are generated in a predictable location.
+      # Run mutation testing using the configuration defined in stryker-config.json.
+      # Mutation thresholds are enforced by Stryker itself through its own configuration.
+      # This step continues on error so the workflow can still upload reports and fail cleanly at the end.
       - name: Run Mutation Tests (Stryker)
         if: always()
         continue-on-error: true
         run: |
           set +e
-
-          rm -rf StrykerOutput
-          mkdir -p StrykerOutput
-
-          dotnet stryker \
-            --config-file stryker-config.json \
-            --output StrykerOutput \
-            --reporter html \
-            --reporter json \
-            --threshold-high "$MUTATION_HIGH" \
-            --threshold-low "$MUTATION_LOW" \
-            --threshold-break "$MUTATION_BREAK"
-
+          dotnet stryker --config-file stryker-config.json
           echo "STRYKER_EXIT_CODE=$?" >> $GITHUB_ENV
 
-          echo "---- Raw Stryker files after run ----"
-          find StrykerOutput -maxdepth 10 -type f || true
-
-          # Copy the generated HTML report to a predictable location if found.
-          HTML_REPORT=$(find StrykerOutput -type f -name "mutation-report.html" | head -n 1)
-          if [ -n "$HTML_REPORT" ]; then
-            cp "$HTML_REPORT" StrykerOutput/mutation-report.html
-          fi
-
-          # Copy the generated JSON report to a predictable location if found.
-          JSON_REPORT=$(find StrykerOutput -type f -name "mutation-report.json" | head -n 1)
-          if [ -n "$JSON_REPORT" ]; then
-            cp "$JSON_REPORT" StrykerOutput/mutation-report.json
+          REPORT=$(find StrykerOutput -type f -name "mutation-report.html" | head -n 1)
+          if [ -n "$REPORT" ]; then
+            cp "$REPORT" StrykerOutput/mutation-report.html
           fi
 
           exit 0
 
-      # Prints generated files for easier debugging if something goes wrong.
+      # Print generated files for debugging purposes.
+      # This is helpful when report output paths do not match expectations.
       - name: Debug outputs
         if: always()
         run: |
           echo "---- CoverageReport ----"
           find CoverageReport -maxdepth 3 -type f || true
           echo "---- StrykerOutput ----"
-          find StrykerOutput -maxdepth 10 -type f || true
+          find StrykerOutput -maxdepth 8 -type f || true
 
-      # Uploads coverage artifacts regardless of pipeline success or failure.
+      # Upload the generated coverage report as a workflow artifact.
       - name: Upload Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -195,7 +176,7 @@ jobs:
           path: CoverageReport
           if-no-files-found: warn
 
-      # Uploads Stryker artifacts regardless of pipeline success or failure.
+      # Upload the generated Stryker report as a workflow artifact.
       - name: Upload Stryker Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -204,67 +185,47 @@ jobs:
           path: StrykerOutput
           if-no-files-found: warn
 
-      # Final quality gate.
-      # This step is responsible for failing the pipeline when required checks do not meet the defined thresholds.
+      # Perform the final quality checks and fail the workflow if needed.
+      # The workflow fails if:
+      # - unit tests failed
+      # - SonarQube quality gate failed
+      # - coverage report is missing or below threshold
+      # - Stryker failed, including when mutation thresholds configured in stryker-config.json are not met
       - name: Enforce thresholds
         if: always()
         run: |
           FAIL=0
 
-          echo "---- Final quality gate ----"
-
-          # Fail if unit tests failed.
           if [ "${TEST_EXIT_CODE:-1}" -ne 0 ]; then
             echo "Unit tests failed."
             FAIL=1
           fi
 
-          # Fail if SonarQube was enabled but did not complete successfully.
           if [ "${SONAR_ENABLED:-0}" = "1" ] && [ "${SONAR_END_EXIT_CODE:-1}" -ne 0 ]; then
             echo "SonarQube quality gate failed."
             FAIL=1
           fi
 
-          # Fail if coverage summary is missing.
           if [ ! -f "CoverageReport/Summary.txt" ]; then
             echo "Coverage summary missing."
             FAIL=1
           else
-            echo "Coverage summary:"
-            cat CoverageReport/Summary.txt
-
-            COVERAGE=$(grep "Line coverage" CoverageReport/Summary.txt | sed -E 's/.*: ([0-9]+(\.[0-9]+)?)%.*/\1/' | head -n 1)
-
-            if [ -z "$COVERAGE" ]; then
-              echo "Could not extract line coverage percentage."
-              FAIL=1
-            else
-              echo "Line coverage: $COVERAGE%"
-              awk "BEGIN { exit !($COVERAGE >= $COVERAGE_THRESHOLD) }" || {
-                echo "Code coverage is below the threshold of ${COVERAGE_THRESHOLD}%."
-                FAIL=1
-              }
-            fi
+            COVERAGE=$(grep -oP 'Line coverage:\s+\K[0-9]+(\.[0-9]+)?' CoverageReport/Summary.txt | head -n 1 || echo "0")
+            echo "Coverage: $COVERAGE%"
+            awk "BEGIN {exit !($COVERAGE >= $COVERAGE_THRESHOLD)}" || FAIL=1
           fi
 
-          # Fail if mutation testing did not complete successfully.
-          # Because Stryker uses --threshold-break, a non-zero exit code means the mutation threshold failed
-          # or Stryker encountered an error.
-          if [ "${STRYKER_EXIT_CODE:-1}" -ne 0 ]; then
-            echo "Mutation testing failed or mutation score was below the threshold."
-            FAIL=1
-          fi
-
-          # Require that at least one Stryker report exists.
-          if [ ! -f "StrykerOutput/mutation-report.html" ] && [ ! -f "StrykerOutput/mutation-report.json" ]; then
+          if [ ! -f "StrykerOutput/mutation-report.html" ]; then
             echo "Mutation report missing."
             FAIL=1
           fi
 
-          # End the workflow with failure if any quality gate failed.
-          if [ "$FAIL" -ne 0 ]; then
-            echo "One or more quality checks failed."
-            exit 1
+          if [ "${STRYKER_EXIT_CODE:-1}" -ne 0 ]; then
+            echo "Stryker failed or mutation thresholds were not met."
+            FAIL=1
           fi
 
-          echo "All quality checks passed."
+          if [ "$FAIL" -ne 0 ]; then
+            echo "Quality checks failed."
+            exit 1
+          fi
