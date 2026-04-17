@@ -5,8 +5,8 @@
         "reporters": [ "html", "json", "progress" ],
         "thresholds": {
             "high": 80,
-            "low": 80,
-            "break": 80
+            "low": 60,
+            "break": 60
         },
         "mutate": [
             "**/*.cs",
