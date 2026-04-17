@@ -4,7 +4,7 @@ import { check, sleep } from 'k6';
 export const options = {
     stages: [
         { duration: '15s', target: 5 },   // Small baseline
-        { duration: '10s', target: 50 },  // Sudden spike
+        { duration: '10s', target: 50 },  // Sudden spike // could be higher but is lower for demonstrating purposes only
         { duration: '20s', target: 50 },  // Hold spike shortly
         { duration: '10s', target: 5 },   // Drop down again
         { duration: '10s', target: 0 }    // End test

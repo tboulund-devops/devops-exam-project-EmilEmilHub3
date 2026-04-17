@@ -4,7 +4,7 @@ import { check, sleep } from 'k6';
 export const options = {
     stages: [
         { duration: '1m', target: 10 },   // Ramp up
-        { duration: '10m', target: 10 },  // Stay under steady load for a long period
+        { duration: '10m', target: 10 },  // Stay under steady load for a long period // could be higher but is lower for demonstrating purposes only
         { duration: '1m', target: 0 }     // Ramp down
     ],
     thresholds: {
