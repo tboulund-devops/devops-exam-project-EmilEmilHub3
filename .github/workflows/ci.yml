@@ -88,7 +88,7 @@ jobs:
           echo "TEST_EXIT_CODE=$?" >> $GITHUB_ENV
           exit 0
 
-      # Generate coverage reports for SonarQube import and threshold validation.
+      # Generate coverage reports for SonarQube import, threshold validation, and artifact download.
       - name: Generate coverage report
         if: always()
         continue-on-error: true
@@ -96,7 +96,7 @@ jobs:
           reportgenerator \
             -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"CoverageReport" \
-            -reporttypes:"TextSummary;SonarQube" \
+            -reporttypes:"Html;TextSummary;SonarQube" \
             -filefilters:"-**/Migrations/**;-**/Program.cs;-**/*DbContext*.cs;-**/FeatureFlags/**"
 
       # Finalize SonarQube analysis if the begin step succeeded.
@@ -125,6 +125,24 @@ jobs:
           dotnet stryker --config-file stryker-config.json
           echo "STRYKER_EXIT_CODE=$?" >> $GITHUB_ENV
           exit 0
+
+      # Upload the generated coverage report so it can be downloaded from GitHub Actions.
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: CoverageReport
+          if-no-files-found: warn
+
+      # Upload the generated Stryker report so it can be downloaded from GitHub Actions.
+      - name: Upload Stryker report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stryker-report
+          path: StrykerOutput
+          if-no-files-found: warn
 
       # Fail the workflow if quality requirements are not met.
       - name: Enforce thresholds
