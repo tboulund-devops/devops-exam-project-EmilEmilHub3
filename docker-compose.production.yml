@@ -25,7 +25,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}
-      FeatureHub__EdgeUrl: ${FeatureHub__EdgeUrl}
+      FeatureHub__EdgeUrl: http://213.199.52.8:8085/
       FeatureHub__ApiKey: ${FeatureHub__ApiKey}
     ports:
       - "8000:8080"
