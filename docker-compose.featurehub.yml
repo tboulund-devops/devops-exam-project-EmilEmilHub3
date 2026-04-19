@@ -1,11 +1,19 @@
 services:
+  # FeatureHub Party Server provides feature flag management
+  # for both staging and production environments.
   featurehub:
     image: featurehub/party-server:latest
     restart: unless-stopped
+
+    # Expose FeatureHub web interface and API on port 8085.
     ports:
       - "8085:8085"
+
+    # Persist FeatureHub data to a Docker volume
+    # so feature flags survive container restarts.
     volumes:
       - featurehub_shared_data:/db
 
 volumes:
+  # Shared persistent storage used by FeatureHub.
   featurehub_shared_data:

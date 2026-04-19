@@ -5,6 +5,12 @@ using SimpleShop.Api.Services;
 
 namespace SimpleShop.Tests;
 
+/// <summary>
+/// Unit tests for <see cref="ProductService"/>.
+/// Tests verify validation, trimming, repository calls,
+/// and product management business logic.
+/// Tests follow the Arrange, Act, Assert (AAA) pattern.
+/// </summary>
 public class ProductServiceTests
 {
     [Theory]

@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Models\CaitItemResponeDto.cs" />
+    <None Include="Models\CartItemResponeDto.cs" />
   </ItemGroup>
 
   <ItemGroup>

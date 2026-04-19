@@ -5,11 +5,17 @@ using SimpleShop.Api.Services;
 
 namespace SimpleShop.Tests;
 
+/// <summary>
+/// Unit tests for <see cref="AuthService"/>.
+/// Tests follow the Arrange, Act, Assert (AAA) pattern
+/// to keep test intent readable and maintainable.
+/// </summary>
 public class AuthServiceTests
 {
     [Fact]
     public async Task RegisterAsync_WhenUsernameMissing_ThrowsArgumentException()
     {
+        // Arrange
         var repo = new Mock<IUserRepository>();
         var service = new AuthService(repo.Object);
 
@@ -20,8 +26,10 @@ public class AuthServiceTests
             Password = "123456"
         };
 
+        // Act
         var act = async () => await service.RegisterAsync(dto);
 
+        // Assert
         await Assert.ThrowsAsync<ArgumentException>(act);
         repo.Verify(r => r.GetByEmailAsync(It.IsAny<string>()), Times.Never);
         repo.Verify(r => r.AddAsync(It.IsAny<User>()), Times.Never);
@@ -30,6 +38,7 @@ public class AuthServiceTests
     [Fact]
     public async Task RegisterAsync_WhenEmailMissing_ThrowsArgumentException()
     {
+        // Arrange
         var repo = new Mock<IUserRepository>();
         var service = new AuthService(repo.Object);
 
@@ -40,8 +49,10 @@ public class AuthServiceTests
             Password = "123456"
         };
 
+        // Act
         var act = async () => await service.RegisterAsync(dto);
 
+        // Assert
         await Assert.ThrowsAsync<ArgumentException>(act);
         repo.Verify(r => r.GetByEmailAsync(It.IsAny<string>()), Times.Never);
         repo.Verify(r => r.AddAsync(It.IsAny<User>()), Times.Never);
@@ -50,6 +61,7 @@ public class AuthServiceTests
     [Fact]
     public async Task RegisterAsync_WhenPasswordMissing_ThrowsArgumentException()
     {
+        // Arrange
         var repo = new Mock<IUserRepository>();
         var service = new AuthService(repo.Object);
 
@@ -60,8 +72,10 @@ public class AuthServiceTests
             Password = "   "
         };
 
+        // Act
         var act = async () => await service.RegisterAsync(dto);
 
+        // Assert
         await Assert.ThrowsAsync<ArgumentException>(act);
         repo.Verify(r => r.GetByEmailAsync(It.IsAny<string>()), Times.Never);
         repo.Verify(r => r.AddAsync(It.IsAny<User>()), Times.Never);
@@ -70,7 +84,9 @@ public class AuthServiceTests
     [Fact]
     public async Task RegisterAsync_WhenEmailAlreadyExists_ThrowsArgumentException()
     {
+        // Arrange
         var repo = new Mock<IUserRepository>();
+
         repo.Setup(r => r.GetByEmailAsync("test@test.com"))
             .ReturnsAsync(new User { Id = 1, Email = "test@test.com" });
 
@@ -83,8 +99,10 @@ public class AuthServiceTests
             Password = "123456"
         };
 
+        // Act
         var act = async () => await service.RegisterAsync(dto);
 
+        // Assert
         await Assert.ThrowsAsync<ArgumentException>(act);
         repo.Verify(r => r.GetByEmailAsync("test@test.com"), Times.Once);
         repo.Verify(r => r.AddAsync(It.IsAny<User>()), Times.Never);
@@ -93,7 +111,9 @@ public class AuthServiceTests
     [Fact]
     public async Task RegisterAsync_WhenValid_NormalizesAndHashesAndCallsRepository()
     {
+        // Arrange
         var repo = new Mock<IUserRepository>();
+
         repo.Setup(r => r.GetByEmailAsync("test@test.com"))
             .ReturnsAsync((User?)null);
 
@@ -116,8 +136,10 @@ public class AuthServiceTests
             Password = "123456"
         };
 
+        // Act
         var result = await service.RegisterAsync(dto);
 
+        // Assert
         Assert.Equal(5, result.Id);
         Assert.Equal("Emil", result.Username);
         Assert.Equal("test@test.com", result.Email);
@@ -136,6 +158,7 @@ public class AuthServiceTests
     [Fact]
     public async Task LoginAsync_WhenEmailMissing_ThrowsArgumentException()
     {
+        // Arrange
         var repo = new Mock<IUserRepository>();
         var service = new AuthService(repo.Object);
 
@@ -145,8 +168,10 @@ public class AuthServiceTests
             Password = "123456"
         };
 
+        // Act
         var act = async () => await service.LoginAsync(dto);
 
+        // Assert
         await Assert.ThrowsAsync<ArgumentException>(act);
         repo.Verify(r => r.GetByEmailAsync(It.IsAny<string>()), Times.Never);
     }
@@ -154,6 +179,7 @@ public class AuthServiceTests
     [Fact]
     public async Task LoginAsync_WhenPasswordMissing_ThrowsArgumentException()
     {
+        // Arrange
         var repo = new Mock<IUserRepository>();
         var service = new AuthService(repo.Object);
 
@@ -163,8 +189,10 @@ public class AuthServiceTests
             Password = "   "
         };
 
+        // Act
         var act = async () => await service.LoginAsync(dto);
 
+        // Assert
         await Assert.ThrowsAsync<ArgumentException>(act);
         repo.Verify(r => r.GetByEmailAsync(It.IsAny<string>()), Times.Never);
     }
@@ -172,7 +200,9 @@ public class AuthServiceTests
     [Fact]
     public async Task LoginAsync_WhenUserDoesNotExist_ReturnsNull()
     {
+        // Arrange
         var repo = new Mock<IUserRepository>();
+
         repo.Setup(r => r.GetByEmailAsync("test@test.com"))
             .ReturnsAsync((User?)null);
 
@@ -184,8 +214,10 @@ public class AuthServiceTests
             Password = "123456"
         };
 
+        // Act
         var result = await service.LoginAsync(dto);
 
+        // Assert
         Assert.Null(result);
         repo.Verify(r => r.GetByEmailAsync("test@test.com"), Times.Once);
     }
@@ -193,7 +225,9 @@ public class AuthServiceTests
     [Fact]
     public async Task LoginAsync_WhenPasswordIsWrong_ReturnsNull()
     {
+        // Arrange
         var repo = new Mock<IUserRepository>();
+
         repo.Setup(r => r.GetByEmailAsync("test@test.com"))
             .ReturnsAsync(new User
             {
@@ -211,8 +245,10 @@ public class AuthServiceTests
             Password = "123456"
         };
 
+        // Act
         var result = await service.LoginAsync(dto);
 
+        // Assert
         Assert.Null(result);
         repo.Verify(r => r.GetByEmailAsync("test@test.com"), Times.Once);
     }
@@ -220,11 +256,14 @@ public class AuthServiceTests
     [Fact]
     public async Task LoginAsync_WhenPasswordIsCorrect_ReturnsUser()
     {
+        // Arrange
         var registerRepo = new Mock<IUserRepository>();
+
         registerRepo.Setup(r => r.GetByEmailAsync("test@test.com"))
             .ReturnsAsync((User?)null);
 
         User? createdUser = null;
+
         registerRepo.Setup(r => r.AddAsync(It.IsAny<User>()))
             .Callback<User>(u => createdUser = u)
             .ReturnsAsync((User u) =>
@@ -245,17 +284,22 @@ public class AuthServiceTests
         Assert.NotNull(createdUser);
 
         var loginRepo = new Mock<IUserRepository>();
+
         loginRepo.Setup(r => r.GetByEmailAsync("test@test.com"))
             .ReturnsAsync(createdUser);
 
         var loginService = new AuthService(loginRepo.Object);
 
-        var result = await loginService.LoginAsync(new LoginDto
+        var dto = new LoginDto
         {
             Email = "test@test.com",
             Password = "123456"
-        });
+        };
 
+        // Act
+        var result = await loginService.LoginAsync(dto);
+
+        // Assert
         Assert.NotNull(result);
         Assert.Equal("Emil", result!.Username);
         Assert.Equal("test@test.com", result.Email);

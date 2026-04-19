@@ -1,3 +1,4 @@
+/* Base page styling */
 body {
     font-family: Arial, sans-serif;
     background: #f4f4f4;
@@ -5,16 +6,19 @@ body {
     padding: 24px;
 }
 
+/* Main content wrapper */
 .container {
     max-width: 900px;
     margin: 0 auto;
 }
 
+/* Subtitle below the main heading */
 .subtitle {
     margin-top: -8px;
     color: #555;
 }
 
+/* Shared card layout for UI sections */
 .card {
     background: white;
     border: 1px solid #ddd;
@@ -23,6 +27,7 @@ body {
     margin-bottom: 16px;
 }
 
+/* Vertical layout used for forms and stacked controls */
 form,
 .row {
     display: flex;
@@ -30,42 +35,51 @@ form,
     gap: 10px;
 }
 
+/* Shared input and button styling */
 input,
 button {
     padding: 10px;
     font-size: 16px;
 }
 
+/* Make buttons appear interactive */
 button {
     cursor: pointer;
 }
 
+/* Status message area used for success and error feedback */
 #status-message {
     min-height: 24px;
     font-weight: bold;
 }
 
+/* Success message styling */
 .success {
     color: #0a7a25;
 }
 
+/* Error message styling */
 .error {
     color: #b00020;
 }
 
+/* Layout for action buttons inside product rows */
 .table-actions {
     display: flex;
     gap: 8px;
 }
 
+    /* Smaller button spacing inside the products table */
     .table-actions button {
         padding: 6px 10px;
     }
 
+/* Emphasize product name in the table */
 .table-row-name {
     font-weight: 600;
 }
 
+/* Adjust layout for wider screens */
 @media (min-width: 700px) {
     form {
         max-width: 400px;
@@ -81,6 +95,7 @@ button {
         }
 }
 
+/* Product table styling */
 table {
     width: 100%;
     border-collapse: collapse;

@@ -5,11 +5,18 @@ using SimpleShop.Api.Services;
 
 namespace SimpleShop.Tests;
 
+/// <summary>
+/// Unit tests for <see cref="OrderService"/>.
+/// Tests verify validation, order creation logic,
+/// and cart clearing behavior.
+/// Tests follow the Arrange, Act, Assert (AAA) pattern.
+/// </summary>
 public class OrderServiceTests
 {
     [Fact]
     public async Task CreateOrderAsync_WhenUserIdInvalid_ThrowsArgumentException()
     {
+        // Arrange
         var orderRepo = new Mock<IOrderRepository>();
         var cartRepo = new Mock<ICartRepository>();
         var userRepo = new Mock<IUserRepository>();
@@ -21,8 +28,10 @@ public class OrderServiceTests
             UserId = 0
         };
 
+        // Act
         var act = async () => await service.CreateOrderAsync(dto);
 
+        // Assert
         await Assert.ThrowsAsync<ArgumentException>(act);
         orderRepo.Verify(r => r.AddAsync(It.IsAny<Order>()), Times.Never);
         cartRepo.Verify(r => r.ClearByUserIdAsync(It.IsAny<int>()), Times.Never);
@@ -31,6 +40,7 @@ public class OrderServiceTests
     [Fact]
     public async Task CreateOrderAsync_WhenUserNotFound_ThrowsArgumentException()
     {
+        // Arrange
         var orderRepo = new Mock<IOrderRepository>();
         var cartRepo = new Mock<ICartRepository>();
         var userRepo = new Mock<IUserRepository>();
@@ -44,8 +54,10 @@ public class OrderServiceTests
             UserId = 1
         };
 
+        // Act
         var act = async () => await service.CreateOrderAsync(dto);
 
+        // Assert
         await Assert.ThrowsAsync<ArgumentException>(act);
         orderRepo.Verify(r => r.AddAsync(It.IsAny<Order>()), Times.Never);
         cartRepo.Verify(r => r.ClearByUserIdAsync(It.IsAny<int>()), Times.Never);
@@ -54,6 +66,7 @@ public class OrderServiceTests
     [Fact]
     public async Task CreateOrderAsync_WhenCartIsEmpty_ThrowsArgumentException()
     {
+        // Arrange
         var orderRepo = new Mock<IOrderRepository>();
         var cartRepo = new Mock<ICartRepository>();
         var userRepo = new Mock<IUserRepository>();
@@ -75,8 +88,10 @@ public class OrderServiceTests
             UserId = 1
         };
 
+        // Act
         var act = async () => await service.CreateOrderAsync(dto);
 
+        // Assert
         await Assert.ThrowsAsync<ArgumentException>(act);
         orderRepo.Verify(r => r.AddAsync(It.IsAny<Order>()), Times.Never);
         cartRepo.Verify(r => r.ClearByUserIdAsync(It.IsAny<int>()), Times.Never);
@@ -85,6 +100,7 @@ public class OrderServiceTests
     [Fact]
     public async Task CreateOrderAsync_WhenValid_ReturnsCreatedOrderResponse_AndClearsCart()
     {
+        // Arrange
         var orderRepo = new Mock<IOrderRepository>();
         var cartRepo = new Mock<ICartRepository>();
         var userRepo = new Mock<IUserRepository>();
@@ -164,8 +180,10 @@ public class OrderServiceTests
             UserId = 1
         };
 
+        // Act
         var result = await service.CreateOrderAsync(dto);
 
+        // Assert
         Assert.Equal(99, result.Id);
         Assert.Equal(1, result.UserId);
         Assert.Equal(2, result.OrderLines.Count);

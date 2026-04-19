@@ -7,6 +7,12 @@ using SimpleShop.Api.Services;
 
 namespace SimpleShop.Tests;
 
+/// <summary>
+/// Unit tests for <see cref="ProductsController"/>.
+/// Tests verify controller responses for CRUD operations
+/// and invalid input handling.
+/// Tests follow the Arrange, Act, Assert (AAA) pattern.
+/// </summary>
 public class ProductsControllerTests
 {
     [Fact]

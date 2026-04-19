@@ -5,10 +5,17 @@ using SimpleShop.Api.Repositories;
 
 namespace SimpleShop.Tests;
 
+/// <summary>
+/// Repository tests for <see cref="CartRepository"/>.
+/// These tests use EF Core InMemoryDatabase to verify persistence behavior.
+/// Tests follow the Arrange, Act, Assert (AAA) pattern.
+/// </summary>
 public class CartRepositoryTests
 {
     private static AppDbContext CreateDb()
     {
+        // Create a fresh in-memory database for each test
+        // to ensure isolation between test cases.
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
@@ -19,6 +26,7 @@ public class CartRepositoryTests
     [Fact]
     public async Task AddAsync_WhenCalled_PersistsCartItem_AndLoadsProduct()
     {
+        // Arrange
         await using var db = CreateDb();
 
         db.Users.Add(new User
@@ -47,8 +55,10 @@ public class CartRepositoryTests
             Quantity = 3
         };
 
+        // Act
         var created = await repo.AddAsync(cartItem);
 
+        // Assert
         Assert.True(created.Id > 0);
         Assert.NotNull(created.Product);
         Assert.Equal("Milk", created.Product!.Name);
@@ -57,6 +67,7 @@ public class CartRepositoryTests
     [Fact]
     public async Task GetByUserIdAsync_WhenUserHasItems_ReturnsOrderedItemsWithProducts()
     {
+        // Arrange
         await using var db = CreateDb();
 
         db.Users.Add(new User
@@ -81,8 +92,10 @@ public class CartRepositoryTests
 
         var repo = new CartRepository(db);
 
+        // Act
         var result = await repo.GetByUserIdAsync(1);
 
+        // Assert
         Assert.Equal(2, result.Count);
         Assert.Equal(1, result[0].Id);
         Assert.Equal(2, result[1].Id);
@@ -93,6 +106,7 @@ public class CartRepositoryTests
     [Fact]
     public async Task GetByIdAsync_WhenItemExists_ReturnsItemWithProduct()
     {
+        // Arrange
         await using var db = CreateDb();
 
         db.Users.Add(new User
@@ -122,8 +136,10 @@ public class CartRepositoryTests
 
         var repo = new CartRepository(db);
 
+        // Act
         var result = await repo.GetByIdAsync(1);
 
+        // Assert
         Assert.NotNull(result);
         Assert.Equal(1, result!.Id);
         Assert.NotNull(result.Product);
@@ -133,6 +149,7 @@ public class CartRepositoryTests
     [Fact]
     public async Task UpdateAsync_WhenCalled_UpdatesQuantity_AndLoadsProduct()
     {
+        // Arrange
         await using var db = CreateDb();
 
         db.Users.Add(new User
@@ -165,8 +182,10 @@ public class CartRepositoryTests
         var existing = await repo.GetByIdAsync(1);
         existing!.Quantity = 5;
 
+        // Act
         var updated = await repo.UpdateAsync(existing);
 
+        // Assert
         Assert.Equal(5, updated.Quantity);
         Assert.NotNull(updated.Product);
         Assert.Equal("Milk", updated.Product!.Name);
@@ -178,6 +197,7 @@ public class CartRepositoryTests
     [Fact]
     public async Task DeleteAsync_WhenCalled_RemovesCartItem()
     {
+        // Arrange
         await using var db = CreateDb();
 
         db.Users.Add(new User
@@ -208,14 +228,17 @@ public class CartRepositoryTests
         var repo = new CartRepository(db);
         var existing = await repo.GetByIdAsync(1);
 
+        // Act
         await repo.DeleteAsync(existing!);
 
+        // Assert
         Assert.False(await db.CartItems.AnyAsync(c => c.Id == 1));
     }
 
     [Fact]
     public async Task ClearByUserIdAsync_WhenUserHasItems_RemovesOnlyThatUsersCartItems()
     {
+        // Arrange
         await using var db = CreateDb();
 
         db.Users.AddRange(
@@ -238,8 +261,10 @@ public class CartRepositoryTests
 
         var repo = new CartRepository(db);
 
+        // Act
         await repo.ClearByUserIdAsync(1);
 
+        // Assert
         Assert.Empty(await db.CartItems.Where(c => c.UserId == 1).ToListAsync());
         Assert.Single(await db.CartItems.Where(c => c.UserId == 2).ToListAsync());
     }

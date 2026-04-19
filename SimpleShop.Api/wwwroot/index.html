@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Basic document metadata and responsive viewport setup -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SimpleShop UI</title>
@@ -11,6 +12,7 @@
         <h1>SimpleShop</h1>
         <p class="subtitle">Very basic UI for TestCafe and demo purposes</p>
 
+        <!-- Product creation section -->
         <section class="card">
             <h2>Create product</h2>
             <form id="create-product-form">
@@ -26,6 +28,7 @@
             </form>
         </section>
 
+        <!-- Product search section -->
         <section class="card">
             <h2>Search products</h2>
             <div class="row">
@@ -35,6 +38,7 @@
             </div>
         </section>
 
+        <!-- Product list section -->
         <section class="card">
             <h2>Products</h2>
             <p id="status-message" data-testid="status-message"></p>
@@ -53,6 +57,7 @@
         </section>
     </main>
 
+    <!-- Main frontend logic -->
     <script src="/app.js"></script>
 </body>
 </html>

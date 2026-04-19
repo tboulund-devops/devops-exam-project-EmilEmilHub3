@@ -1,36 +1,51 @@
 name: Delivery Pipeline
 
 on:
+  # Automatically start the delivery pipeline after the CI workflow completes.
   workflow_run:
     workflows: ["CI"]
     types:
       - completed
+
+  # Allow manual execution from the GitHub Actions UI.
   workflow_dispatch:
 
 permissions:
+  # Required for creating releases and reading repository contents.
   contents: write
+
+  # Required for pushing Docker images to GitHub Container Registry.
   packages: write
 
 jobs:
   Delivery:
+    # Run automatically only when CI succeeded,
+    # or allow manual execution through workflow_dispatch.
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout the commit that triggered the workflow.
+      # workflow_dispatch uses the current SHA,
+      # while workflow_run uses the SHA from the completed CI run.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
+      # Install the required .NET SDK.
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
+      # Restore dependencies for the API project.
       - name: Restore .NET dependencies
         run: dotnet restore SimpleShop.Api/SimpleShop.Api.csproj -r linux-x64
 
+      # Build a self-contained EF Core migration bundle
+      # so database migrations can be executed on the target server.
       - name: Create EF migration bundle
         run: |
           dotnet tool install --global dotnet-ef
@@ -44,10 +59,12 @@ jobs:
             --self-contained \
             --output artifacts/efbundle
 
+      # Define the image name used for all Docker tags.
       - name: Set image name
         id: repo
         run: echo "image_name=ghcr.io/tboulund-devops/devops-exam-project-emilemilhub3" >> $GITHUB_OUTPUT
 
+      # Generate a semantic version based on conventional commits.
       - name: Calculate semantic version
         id: semver
         uses: paulhatch/semantic-version@v5.4.0
@@ -57,6 +74,7 @@ jobs:
           minor_pattern: "feat:"
           version_format: "${major}.${minor}.${patch}"
 
+      # Authenticate to GitHub Container Registry before pushing images.
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -64,6 +82,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Build the API image and tag it for staging, production, and semantic release versioning.
       - name: Build Docker image
         run: |
           docker build \
@@ -73,12 +92,14 @@ jobs:
             -f SimpleShop.Api/Dockerfile \
             .
 
+      # Push all generated image tags to GitHub Container Registry.
       - name: Push Docker images
         run: |
           docker push ${{ steps.repo.outputs.image_name }}:staging
           docker push ${{ steps.repo.outputs.image_name }}:latest
           docker push ${{ steps.repo.outputs.image_name }}:${{ steps.semver.outputs.version }}
 
+      # Create or update a GitHub release for the calculated semantic version.
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
@@ -86,6 +107,8 @@ jobs:
           generateReleaseNotes: true
           allowUpdates: true
 
+      # Copy the staging compose file, FeatureHub compose file,
+      # and EF migration bundle to the staging server.
       - name: Copy staging compose files and EF bundle
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -95,6 +118,7 @@ jobs:
           source: "docker-compose.staging.yml,docker-compose.featurehub.yml,artifacts/efbundle"
           target: "simpleshop"
 
+      # Deploy the latest staging image and apply database migrations.
       - name: Deploy to staging
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -108,14 +132,17 @@ jobs:
             chmod +x artifacts/efbundle
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
+            # Fail early if the staging environment file is missing.
             if [ ! -f .env.staging ]; then
               echo ".env.staging missing"
               exit 1
             fi
 
+            # Start the shared FeatureHub service and staging database.
             docker compose -f docker-compose.featurehub.yml up -d
             docker compose -f docker-compose.staging.yml --env-file .env.staging up -d mysql
 
+            # Wait until MySQL reports healthy status.
             for i in {1..30}; do
               if docker compose -f docker-compose.staging.yml --env-file .env.staging ps mysql | grep -q "healthy"; then
                 echo "MySQL is healthy"
@@ -125,12 +152,14 @@ jobs:
               sleep 5
             done
 
+            # Read database settings from the staging environment file.
             MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env.staging | cut -d= -f2-)
             MYSQL_USER=$(grep '^MYSQL_USER=' .env.staging | cut -d= -f2-)
             MYSQL_PASSWORD=$(grep '^MYSQL_PASSWORD=' .env.staging | cut -d= -f2-)
 
             CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
 
+            # Run EF Core migrations through the generated migration bundle.
             docker run --rm \
               --network simpleshop_default \
               -e ConnectionStrings__DefaultConnection="$CONNECTION_STRING" \
@@ -140,6 +169,7 @@ jobs:
               ./artifacts/efbundle \
               --connection "$CONNECTION_STRING"
 
+            # Pull and start the staging API container.
             docker compose -f docker-compose.staging.yml --env-file .env.staging pull api
             docker compose -f docker-compose.staging.yml --env-file .env.staging up -d api
 
@@ -151,25 +181,31 @@ jobs:
       STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
 
     steps:
+      # Checkout the same commit that was delivered to staging.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
 
+      # Install Node.js for frontend test tooling.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
+      # Install Google Chrome used by TestCafe.
       - name: Install Chrome
         uses: browser-actions/setup-chrome@v1
 
+      # Install JavaScript dependencies required by E2E tests.
       - name: Install npm packages
         run: npm install
 
+      # Print the staging base URL for easier debugging.
       - name: Print staging URL
         run: echo "STAGING_BASE_URL=$STAGING_BASE_URL"
 
+      # Wait until the staging API is available before running E2E tests.
       - name: Wait for staging
         run: |
           echo "Checking $STAGING_BASE_URL/api/products"
@@ -185,6 +221,7 @@ jobs:
           echo "Staging did not become ready in time"
           exit 1
 
+      # Run browser-based E2E tests against the staging environment.
       - name: Run TestCafe E2E on staging
         env:
           CHROME_BIN: /usr/bin/google-chrome
@@ -199,11 +236,13 @@ jobs:
       STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
 
     steps:
+      # Checkout the same commit that was delivered to staging.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
 
+      # Install k6 from the official package repository.
       - name: Install k6
         run: |
           sudo apt-get update
@@ -213,9 +252,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y k6
 
+      # Print the staging base URL for easier debugging.
       - name: Print staging URL
         run: echo "STAGING_BASE_URL=$STAGING_BASE_URL"
 
+      # Wait until the staging API is available before running performance tests.
       - name: Wait for staging
         run: |
           echo "Checking $STAGING_BASE_URL/api/products"
@@ -231,16 +272,19 @@ jobs:
           echo "Staging did not become ready in time"
           exit 1
 
+      # Run the standard load test against staging.
       - name: Run k6 load test on staging
         env:
           BASE_URL: ${{ vars.STAGING_BASE_URL }}
         run: k6 run tests/performance/load-test.js
 
+      # Run the spike test against staging.
       - name: Run k6 spike test on staging
         env:
           BASE_URL: ${{ vars.STAGING_BASE_URL }}
         run: k6 run tests/performance/spike-test.js
 
+      # Run the soak test against staging.
       - name: Run k6 soak test on staging
         env:
           BASE_URL: ${{ vars.STAGING_BASE_URL }}
@@ -255,19 +299,24 @@ jobs:
       - performance-staging
 
     steps:
+      # Checkout the same commit that passed staging validation.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.workflow_run.head_sha }}
 
+      # Install the required .NET SDK.
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
+      # Restore dependencies for the API project.
       - name: Restore .NET dependencies
         run: dotnet restore SimpleShop.Api/SimpleShop.Api.csproj -r linux-x64
 
+      # Build a self-contained EF Core migration bundle
+      # so database migrations can be executed on the production server.
       - name: Create EF migration bundle
         run: |
           dotnet tool install --global dotnet-ef
@@ -281,6 +330,8 @@ jobs:
             --self-contained \
             --output artifacts/efbundle
 
+      # Copy the production compose file, FeatureHub compose file,
+      # and EF migration bundle to the production server.
       - name: Copy production compose files and EF bundle
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -290,6 +341,7 @@ jobs:
           source: "docker-compose.production.yml,docker-compose.featurehub.yml,artifacts/efbundle"
           target: "simpleshop"
 
+      # Deploy the production image and apply database migrations.
       - name: Deploy to production
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -303,14 +355,17 @@ jobs:
             chmod +x artifacts/efbundle
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
+            # Fail early if the production environment file is missing.
             if [ ! -f .env.production ]; then
               echo ".env.production missing"
               exit 1
             fi
 
+            # Start the shared FeatureHub service and production database.
             docker compose -f docker-compose.featurehub.yml up -d
             docker compose -f docker-compose.production.yml --env-file .env.production up -d mysql
 
+            # Wait until MySQL reports healthy status.
             for i in {1..30}; do
               if docker compose -f docker-compose.production.yml --env-file .env.production ps mysql | grep -q "healthy"; then
                 echo "MySQL is healthy"
@@ -320,12 +375,14 @@ jobs:
               sleep 5
             done
 
+            # Read database settings from the production environment file.
             MYSQL_DATABASE=$(grep '^MYSQL_DATABASE=' .env.production | cut -d= -f2-)
             MYSQL_USER=$(grep '^MYSQL_USER=' .env.production | cut -d= -f2-)
             MYSQL_PASSWORD=$(grep '^MYSQL_PASSWORD=' .env.production | cut -d= -f2-)
 
             CONNECTION_STRING="server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
 
+            # Run EF Core migrations through the generated migration bundle.
             docker run --rm \
               --network simpleshop_default \
               -e ConnectionStrings__DefaultConnection="$CONNECTION_STRING" \
@@ -335,5 +392,6 @@ jobs:
               ./artifacts/efbundle \
               --connection "$CONNECTION_STRING"
 
+            # Pull and start the production API container.
             docker compose -f docker-compose.production.yml --env-file .env.production pull api
             docker compose -f docker-compose.production.yml --env-file .env.production up -d api

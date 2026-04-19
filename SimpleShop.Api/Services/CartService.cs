@@ -3,12 +3,29 @@ using SimpleShop.Api.Repositories;
 
 namespace SimpleShop.Api.Services;
 
+/// <summary>
+/// Provides business logic related to shopping cart operations.
+/// Responsible for validation, cart item creation, retrieval,
+/// updates, and removal.
+/// </summary>
 public class CartService
 {
     private readonly ICartRepository _cartRepository;
     private readonly IUserRepository _userRepository;
     private readonly IProductRepository _productRepository;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CartService"/> class.
+    /// </summary>
+    /// <param name="cartRepository">
+    /// Repository used for cart item persistence.
+    /// </param>
+    /// <param name="userRepository">
+    /// Repository used to validate that users exist.
+    /// </param>
+    /// <param name="productRepository">
+    /// Repository used to validate that products exist.
+    /// </param>
     public CartService(
         ICartRepository cartRepository,
         IUserRepository userRepository,
@@ -19,6 +36,20 @@ public class CartService
         _productRepository = productRepository;
     }
 
+    /// <summary>
+    /// Adds a product to a user's cart after validating
+    /// the user, product, and quantity.
+    /// </summary>
+    /// <param name="dto">
+    /// The cart item data to add.
+    /// </param>
+    /// <returns>
+    /// A response DTO representing the created cart item.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when required values are missing,
+    /// invalid, or refer to non-existing entities.
+    /// </exception>
     public async Task<CartItemResponseDto> AddItemAsync(AddCartItemDto dto)
     {
         if (!dto.UserId.HasValue || dto.UserId.Value <= 0)
@@ -50,6 +81,8 @@ public class CartService
         };
 
         var created = await _cartRepository.AddAsync(cartItem);
+
+        // Fallback to the already loaded product if the repository did not hydrate it.
         var createdProduct = created.Product ?? product;
 
         return new CartItemResponseDto
@@ -62,6 +95,19 @@ public class CartService
         };
     }
 
+    /// <summary>
+    /// Gets the current cart for a specific user.
+    /// </summary>
+    /// <param name="userId">
+    /// The identifier of the user whose cart should be returned.
+    /// </param>
+    /// <returns>
+    /// A response DTO containing cart items and total price.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the user identifier is invalid
+    /// or the user does not exist.
+    /// </exception>
     public async Task<CartResponseDto> GetCartAsync(int userId)
     {
         if (userId <= 0)
@@ -90,6 +136,24 @@ public class CartService
         };
     }
 
+    /// <summary>
+    /// Updates the quantity of an existing cart item.
+    /// </summary>
+    /// <param name="id">
+    /// The identifier of the cart item.
+    /// </param>
+    /// <param name="dto">
+    /// The new quantity data.
+    /// </param>
+    /// <returns>
+    /// A response DTO representing the updated cart item.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the identifier or quantity is invalid.
+    /// </exception>
+    /// <exception cref="KeyNotFoundException">
+    /// Thrown when the cart item does not exist.
+    /// </exception>
     public async Task<CartItemResponseDto> UpdateItemQuantityAsync(int id, UpdateCartItemQuantityDto dto)
     {
         if (id <= 0)
@@ -116,6 +180,21 @@ public class CartService
         };
     }
 
+    /// <summary>
+    /// Removes a cart item from the cart.
+    /// </summary>
+    /// <param name="id">
+    /// The identifier of the cart item to remove.
+    /// </param>
+    /// <returns>
+    /// A task that represents the asynchronous remove operation.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the identifier is invalid.
+    /// </exception>
+    /// <exception cref="KeyNotFoundException">
+    /// Thrown when the cart item does not exist.
+    /// </exception>
     public async Task RemoveItemAsync(int id)
     {
         if (id <= 0)

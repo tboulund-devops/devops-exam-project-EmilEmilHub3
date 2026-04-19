@@ -1,34 +1,58 @@
 services:
+  # MySQL database used by the staging environment.
   mysql:
     image: mysql:8.0
     restart: unless-stopped
+
+    # Database credentials and initialization settings
+    # are loaded from environment variables.
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+    # Persist staging database files between container restarts.
     volumes:
       - mysql_staging_data:/var/lib/mysql
+
+    # Healthcheck ensures MySQL is ready
+    # before dependent services start.
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p${MYSQL_ROOT_PASSWORD}"]
+      test:
+        ["CMD-SHELL", "mysqladmin ping -h localhost -p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10
 
+  # Staging API container running the staging image.
   api:
     image: ${IMAGE_NAME}:staging
     restart: unless-stopped
+
+    # Wait until the database is healthy before starting the API.
     depends_on:
       mysql:
         condition: service_healthy
+
+    # Runtime configuration for the staging environment.
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
+
+      # Configure Kestrel to listen on port 8080 inside the container.
       ASPNETCORE_URLS: http://+:8080
+
+      # Internal Docker network connection string for MySQL.
       ConnectionStrings__DefaultConnection: server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}
+
+      # Connect to the shared external FeatureHub instance.
       FeatureHub__EdgeUrl: http://213.199.52.8:8085
       FeatureHub__ApiKey: ${FeatureHub__ApiKey}
+
+    # Expose the staging API on host port 8001.
     ports:
       - "8001:8080"
 
 volumes:
+  # Persistent storage for the staging MySQL database.
   mysql_staging_data:

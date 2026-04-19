@@ -5,12 +5,18 @@ using SimpleShop.Api.Repositories;
 
 namespace SimpleShop.Tests;
 
+/// <summary>
+/// Repository tests for <see cref="ProductRepository"/>.
+/// These tests use EF Core InMemoryDatabase to verify CRUD operations
+/// and search behavior.
+/// Tests follow the Arrange, Act, Assert (AAA) pattern.
+/// </summary>
 public class ProductRepositoryTests
 {
     private static AppDbContext CreateDb()
     {
         // Create a fresh in-memory database for each test
-        // (Unique DB name avoids cross-test state bleed)
+        // to ensure isolation between test cases.
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
@@ -152,7 +158,7 @@ public class ProductRepositoryTests
         // Act
         var updated = await repo.UpdateAsync(tracked);
 
-        // Assertt
+        // Assert
         Assert.Equal(1, updated.Id);
         Assert.Equal("Milk 2", updated.Name);
         Assert.Equal(20m, updated.Price);

@@ -7,11 +7,17 @@ using SimpleShop.Api.Services;
 
 namespace SimpleShop.Tests;
 
+/// <summary>
+/// Unit tests for <see cref="OrdersController"/>.
+/// Tests verify controller response behavior for order creation.
+/// Tests follow the Arrange, Act, Assert (AAA) pattern.
+/// </summary>
 public class OrdersControllerTests
 {
     [Fact]
     public async Task Create_WhenValid_ReturnsCreated()
     {
+        // Arrange
         var orderRepo = new Mock<IOrderRepository>();
         var cartRepo = new Mock<ICartRepository>();
         var userRepo = new Mock<IUserRepository>();
@@ -63,8 +69,10 @@ public class OrdersControllerTests
             UserId = 1
         };
 
+        // Act
         var result = await controller.Create(dto);
 
+        // Assert
         var created = Assert.IsType<CreatedResult>(result.Result);
         Assert.Equal("/api/orders/50", created.Location);
 
@@ -78,6 +86,7 @@ public class OrdersControllerTests
     [Fact]
     public async Task Create_WhenInvalid_ReturnsBadRequest()
     {
+        // Arrange
         var orderRepo = new Mock<IOrderRepository>();
         var cartRepo = new Mock<ICartRepository>();
         var userRepo = new Mock<IUserRepository>();
@@ -90,8 +99,10 @@ public class OrdersControllerTests
             UserId = 0
         };
 
+        // Act
         var result = await controller.Create(dto);
 
+        // Assert
         Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 }

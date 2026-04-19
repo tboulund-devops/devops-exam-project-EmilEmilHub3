@@ -5,10 +5,18 @@ using SimpleShop.Api.Repositories;
 
 namespace SimpleShop.Tests;
 
+/// <summary>
+/// Repository tests for <see cref="OrderRepository"/>.
+/// These tests use EF Core InMemoryDatabase to verify
+/// order persistence and related entity loading.
+/// Tests follow the Arrange, Act, Assert (AAA) pattern.
+/// </summary>
 public class OrderRepositoryTests
 {
     private static AppDbContext CreateDb()
     {
+        // Create a fresh in-memory database for each test
+        // to ensure isolation between test cases.
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
@@ -19,6 +27,7 @@ public class OrderRepositoryTests
     [Fact]
     public async Task AddAsync_WhenCalled_PersistsOrderAndOrderLines_AndLoadsProducts()
     {
+        // Arrange
         await using var db = CreateDb();
 
         db.Users.Add(new User
@@ -68,8 +77,10 @@ public class OrderRepositoryTests
             }
         };
 
+        // Act
         var created = await repo.AddAsync(order);
 
+        // Assert
         Assert.True(created.Id > 0);
         Assert.Equal(1, created.UserId);
         Assert.Equal(2, created.OrderLines.Count);

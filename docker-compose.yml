@@ -1,48 +1,82 @@
 services:
+  # MySQL database used by the SimpleShop application.
   mysql:
     image: mysql:8.0
     restart: unless-stopped
+
+    # Database credentials and startup configuration
+    # loaded from environment variables.
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+    # Expose MySQL externally on port 3307
+    # while using default container port 3306 internally.
     ports:
       - "3307:3306"
+
+    # Persist database files between container restarts.
     volumes:
       - mysql_data:/var/lib/mysql
+
+    # Wait until MySQL is ready before dependent services start.
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10
 
+  # FeatureHub Party Server used for feature toggle management.
   featurehub:
     image: featurehub/party-server:latest
     restart: unless-stopped
+
+    # Expose FeatureHub UI and API.
     ports:
       - "8085:8085"
+
+    # Persist feature flag data.
     volumes:
       - featurehub_data:/db
 
+  # Main ASP.NET Core Web API service.
   api:
     build:
+      # Build the image from the project root.
       context: .
+
+      # Use the Dockerfile inside the API project folder.
       dockerfile: SimpleShop.Api/Dockerfile
+
     restart: unless-stopped
+
+    # Ensure dependencies are available before startup.
     depends_on:
       mysql:
         condition: service_healthy
       featurehub:
         condition: service_started
+
+    # Runtime environment variables injected into the container.
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+
+      # Internal Docker network connection string.
       ConnectionStrings__DefaultConnection: "server=mysql;port=3306;database=${MYSQL_DATABASE};user=${MYSQL_USER};password=${MYSQL_PASSWORD}"
+
+      # FeatureHub Edge configuration.
       FeatureHub__EdgeUrl: ${FeatureHub__EdgeUrl}
       FeatureHub__ApiKey: ${FeatureHub__ApiKey}
+
+    # Expose API on host port 8080.
     ports:
       - "8080:8080"
 
 volumes:
+  # Persistent MySQL storage.
   mysql_data:
+
+  # Persistent FeatureHub storage.
   featurehub_data:
