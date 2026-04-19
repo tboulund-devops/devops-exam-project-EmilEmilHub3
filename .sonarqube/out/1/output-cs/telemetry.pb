@@ -1,1 +1,0 @@
-~RhC:\Users\claim\Source\Repos\devops-exam-project-EmilEmilHub3new\SimpleShop.Tests\SimpleShop.Tests.csproj¢net8.0òCSharp12

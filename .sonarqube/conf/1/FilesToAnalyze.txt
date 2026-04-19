@@ -1,9 +1,0 @@
-﻿C:\Users\claim\Source\Repos\devops-exam-project-EmilEmilHub3new\SimpleShop.Tests\ProductRepositoryTests.cs
-C:\Users\claim\Source\Repos\devops-exam-project-EmilEmilHub3new\SimpleShop.Tests\ProductsControllerTests.cs
-C:\Users\claim\Source\Repos\devops-exam-project-EmilEmilHub3new\SimpleShop.Tests\ProductServiceTests.cs
-C:\Users\claim\.nuget\packages\microsoft.net.test.sdk\17.8.0\build\netcoreapp3.1\Microsoft.NET.Test.Sdk.Program.cs
-C:\Users\claim\.nuget\packages\microsoft.testplatform.testhost\17.8.0\build\netcoreapp3.1\x64\testhost.exe
-C:\Users\claim\.nuget\packages\microsoft.testplatform.testhost\17.8.0\build\netcoreapp3.1\x64\testhost.dll
-C:\Users\claim\.nuget\packages\xunit.runner.visualstudio\2.5.3\build\net6.0\xunit.runner.visualstudio.dotnetcore.testadapter.dll
-C:\Users\claim\.nuget\packages\xunit.runner.visualstudio\2.5.3\build\net6.0\xunit.runner.reporters.netcoreapp10.dll
-C:\Users\claim\.nuget\packages\xunit.runner.visualstudio\2.5.3\build\net6.0\xunit.runner.utility.netcoreapp10.dll

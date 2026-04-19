@@ -1,13 +1,0 @@
-Ê
-gC:\Users\claim\Source\Repos\devops-exam-project-EmilEmilHub3new\SimpleShop.Tests\ProductServiceTests.csSimpleShop.Tests]
-$SimpleShop.Tests.ProductServiceTests5CreateAsync_WhenNameIsMissing_ThrowsArgumentException_
-$SimpleShop.Tests.ProductServiceTests7CreateAsync_WhenPriceIsNegative_ThrowsArgumentExceptionZ
-$SimpleShop.Tests.ProductServiceTests2CreateAsync_WhenValid_TrimsName_AndCallsRepositoryM
-$SimpleShop.Tests.ProductServiceTests%GetAllAsync_ReturnsListFromRepositoryÅ
-kC:\Users\claim\Source\Repos\devops-exam-project-EmilEmilHub3new\SimpleShop.Tests\ProductsControllerTests.csSimpleShop.TestsI
-(SimpleShop.Tests.ProductsControllerTestsGetAll_ReturnsOk_WithProducts_
-(SimpleShop.Tests.ProductsControllerTests3Create_WhenValid_ReturnsCreated_WithLocationAndBodyT
-(SimpleShop.Tests.ProductsControllerTests(Create_WhenNameMissing_ReturnsBadRequest∫
-jC:\Users\claim\Source\Repos\devops-exam-project-EmilEmilHub3new\SimpleShop.Tests\ProductRepositoryTests.csSimpleShop.TestsZ
-'SimpleShop.Tests.ProductRepositoryTests/AddAsync_WhenCalled_PersistsProductAndReturnsIt^
-'SimpleShop.Tests.ProductRepositoryTests3GetAllAsync_WhenMultipleProducts_ReturnsOrderedById
