@@ -10,9 +10,25 @@ obj/
 # Rider
 .idea/
 
+# Test / reports
+TestResults/
+coverage/
+*.trx
+
+# SonarQube
+.sonarqube/
+
 # Logs
 *.log
+
+# Node
+node_modules/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Env / secrets
+.env
+.env.*
+!.env.example
